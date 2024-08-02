@@ -64,6 +64,11 @@
 
 
 ### Changed
+
+* CSD buttons now activate on mouse button **release**, rather than
+  press ([#1787][1787]).
+
+
 ### Deprecated
 ### Removed
 ### Fixed

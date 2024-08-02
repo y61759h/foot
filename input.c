@@ -2577,12 +2577,19 @@ wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
     }
 
     case TERM_SURF_BUTTON_MINIMIZE:
-        if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED)
+        if (button == BTN_LEFT &&
+            term->active_surface == TERM_SURF_BUTTON_MINIMIZE &&
+            state == WL_POINTER_BUTTON_STATE_RELEASED)
+        {
             xdg_toplevel_set_minimized(term->window->xdg_toplevel);
+        }
         break;
 
     case TERM_SURF_BUTTON_MAXIMIZE:
-        if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED) {
+        if (button == BTN_LEFT &&
+            term->active_surface == TERM_SURF_BUTTON_MAXIMIZE &&
+            state == WL_POINTER_BUTTON_STATE_RELEASED)
+        {
             if (term->window->is_maximized)
                 xdg_toplevel_unset_maximized(term->window->xdg_toplevel);
             else
@@ -2591,8 +2598,12 @@ wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
         break;
 
     case TERM_SURF_BUTTON_CLOSE:
-        if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED)
+        if (button == BTN_LEFT &&
+            term->active_surface == TERM_SURF_BUTTON_CLOSE &&
+            state == WL_POINTER_BUTTON_STATE_RELEASED)
+        {
             term_shutdown(term);
+        }
         break;
 
     case TERM_SURF_GRID: {
