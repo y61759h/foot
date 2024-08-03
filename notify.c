@@ -77,7 +77,7 @@ write_icon_file(const void *data, size_t data_sz, int *fd, char **filename,
 
     LOG_DBG("wrote icon data to %s", name);
     *filename = xstrdup(name);
-    *symbolic_name = xasprintf("file://%s", *filename);
+    *symbolic_name = xstrjoin("file://", *filename);
     return true;
 }
 

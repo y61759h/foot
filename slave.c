@@ -55,7 +55,7 @@ find_file_in_path(const char *file)
          path != NULL;
          path = strtok(NULL, ":"))
     {
-        char *full = xasprintf("%s/%s", path, file);
+        char *full = xstrjoin3(path, "/", file);
         if (access(full, F_OK) == 0) {
             free(path_list);
             return full;
@@ -329,7 +329,7 @@ add_to_env(struct environ *env, const char *name, const char *value)
     if (env->envp == NULL)
         setenv(name, value, 1);
     else {
-        char *e = xasprintf("%s=%s", name, value);
+        char *e = xstrjoin3(name, "=", value);
 
         /* Search for existing variable. If found, replace it with the
            new value */

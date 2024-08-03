@@ -797,7 +797,7 @@ kitty_notification(struct terminal *term, char *string)
                 else {
                     /* Append, comma separated */
                     char *old_category = category;
-                    category = xstrjoin(old_category, decoded, ',');
+                    category = xstrjoin3(old_category, ",", decoded);
                     free(decoded);
                     free(old_category);
                 }
@@ -940,7 +940,7 @@ kitty_notification(struct terminal *term, char *string)
             category = NULL;  /* Prevent double free */
         } else {
             /* Append, comma separated */
-            char *new_category = xstrjoin(notif->category, category, ',');
+            char *new_category = xstrjoin3(notif->category, ",", category);
             free(notif->category);
             notif->category = new_category;
         }
@@ -959,7 +959,7 @@ kitty_notification(struct terminal *term, char *string)
             payload = NULL;
         } else {
             char *old = *ptr;
-            *ptr = xstrjoin(old, payload, 0);
+            *ptr = xstrjoin(old, payload);
             free(old);
         }
         break;
@@ -1032,7 +1032,7 @@ kitty_notification(struct terminal *term, char *string)
                     alive_ids = xstrdup(item_id);
                 else {
                     char *old_alive_ids = alive_ids;
-                    alive_ids = xstrjoin(old_alive_ids, item_id, ',');
+                    alive_ids = xstrjoin3(old_alive_ids, ",", item_id);
                     free(old_alive_ids);
                 }
             }
