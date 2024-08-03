@@ -258,7 +258,7 @@ main(int argc, char *const *argv)
             break;
 
         case 't':
-            tll_push_back(overrides, xstrjoin("term=", optarg, 0));
+            tll_push_back(overrides, xstrjoin("term=", optarg));
             break;
 
         case 'L':
@@ -266,11 +266,11 @@ main(int argc, char *const *argv)
             break;
 
         case 'T':
-            tll_push_back(overrides, xstrjoin("title=", optarg, 0));
+            tll_push_back(overrides, xstrjoin("title=", optarg));
             break;
 
         case 'a':
-            tll_push_back(overrides, xstrjoin("app-id=", optarg, 0));
+            tll_push_back(overrides, xstrjoin("app-id=", optarg));
             break;
 
         case 'D': {
@@ -284,7 +284,7 @@ main(int argc, char *const *argv)
         }
 
         case 'f': {
-            char *font_override = xstrjoin("font=", optarg, 0);
+            char *font_override = xstrjoin("font=", optarg);
             tll_push_back(overrides, font_override);
             break;
         }
@@ -658,15 +658,19 @@ out:
 
 UNITTEST
 {
-    char *s = xstrjoin("foo", "bar", 0);
+    char *s = xstrjoin("foo", "bar");
     xassert(streq(s, "foobar"));
     free(s);
 
-    s = xstrjoin("foo", "bar", ' ');
+    s = xstrjoin3("foo", " ", "bar");
     xassert(streq(s, "foo bar"));
     free(s);
 
-    s = xstrjoin("foo", "bar", ',');
+    s = xstrjoin3("foo", ",", "bar");
     xassert(streq(s, "foo,bar"));
+    free(s);
+
+    s = xstrjoin3("foo", "bar", "baz");
+    xassert(streq(s, "foobarbaz"));
     free(s);
 }
