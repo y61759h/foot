@@ -1048,8 +1048,10 @@ reload_fonts(struct terminal *term, bool resize_grid)
     for (size_t i = 0; i < 4; i++) {
         if (tids[i] != 0) {
             int ret;
-            thrd_join(tids[i], &ret);
-            success = success && ret;
+            if (thrd_join(tids[i], &ret) != 0)
+                success = false;
+            else
+                success = success && ret;
         } else
             success = false;
     }
