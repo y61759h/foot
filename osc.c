@@ -564,6 +564,33 @@ osc_notify(struct terminal *term, char *string)
     });
 }
 
+IGNORE_WARNING("-Wpedantic")
+static bool
+verify_kitty_id_is_valid(const char *id)
+{
+    const size_t len = strlen(id);
+
+    for (size_t i = 0; i < len; i++) {
+        switch (id[i]) {
+        case 'a' ... 'z':
+        case 'A' ... 'Z':
+        case '0' ... '9':
+        case '_':
+        case '-':
+        case '+':
+        case '.':
+            break;
+
+        default:
+            return false;
+        }
+    }
+
+    return true;
+}
+UNIGNORE_WARNINGS
+
+
 static void
 kitty_notification(struct terminal *term, char *string)
 {
@@ -672,8 +699,11 @@ kitty_notification(struct terminal *term, char *string)
 
         case 'i':
             /* id */
-            free(id);
-            id = xstrdup(value);
+            if (verify_kitty_id_is_valid(value)) {
+                free(id);
+                id = xstrdup(value);
+            } else
+                LOG_WARN("OSC-99: ignoring invalid 'i' identifier");
             break;
 
         case 'p':
@@ -963,7 +993,7 @@ kitty_notification(struct terminal *term, char *string)
                 tll_push_back(notif->actions, xstrdup(button));
             }
         }
-        
+
         break;
     }
     }
