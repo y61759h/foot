@@ -55,6 +55,14 @@
 
 ## Unreleased
 ### Added
+
+* OSC-99: support for the `s` parameter. Supported keywords are
+  `silent`, `system` and names from the freedesktop sound naming
+  specification.
+* `${muted}` and `${sound-name}` added to the
+  `desktop-notifications.command` template.
+
+
 ### Changed
 ### Deprecated
 ### Removed
