@@ -34,6 +34,7 @@ notify_free(struct terminal *term, struct notification *notif)
     free(notif->icon_cache_id);
     free(notif->icon_symbolic_name);
     free(notif->icon_data);
+    free(notif->sound_name);
     free(notif->xdg_token);
     free(notif->stdout_data);
 
@@ -421,11 +422,11 @@ notify_notify(struct terminal *term, struct notification *notif)
                 ? "normal" : "critical";
 
     LOG_DBG("notify: title=\"%s\", body=\"%s\", app-id=\"%s\", category=\"%s\", "
-            "urgency=\"%s\", icon=\"%s\", expires=%d, replaces=%u, muted=%s "
-            "(tracking: %s)",
+            "urgency=\"%s\", icon=\"%s\", expires=%d, replaces=%u, muted=%s, "
+            "sound-name=%s (tracking: %s)",
             title, body, app_id, notif->category, urgency_str, icon_name_or_path,
             notif->expire_time, replaces_id,
-            notif->muted ? "yes" : "no",
+            notif->muted ? "yes" : "no", notif->sound_name,
             track_notification ? "yes" : "no");
 
     xassert(title != NULL);
@@ -466,14 +467,17 @@ notify_notify(struct terminal *term, struct notification *notif)
     }
 
     if (!spawn_expand_template(
-        &term->conf->desktop_notifications.command, 11,
+        &term->conf->desktop_notifications.command, 12,
         (const char *[]){
             "app-id", "window-title", "icon", "title", "body", "category",
-            "urgency", "muted", "expire-time", "replace-id", "action-argument"},
+            "urgency", "muted", "sound-name", "expire-time", "replace-id",
+            "action-argument"},
         (const char *[]){
             app_id, term->window_title, icon_name_or_path, title, body,
             notif->category != NULL ? notif->category : "", urgency_str,
-            notif->muted ? "true" : "false", expire_time, replaces_id_str,
+            notif->muted ? "true" : "false",
+            notif->sound_name != NULL ? notif->sound_name : "",
+            expire_time, replaces_id_str,
 
             /* Custom expansion below, since we need to expand to multiple arguments */
             "${action-argument}"},
@@ -545,6 +549,7 @@ notify_notify(struct terminal *term, struct notification *notif)
             notif->icon_data = NULL;
             notif->icon_data_sz = 0;
             notif->icon_path = NULL;
+            notif->sound_name = NULL;
             notif->icon_fd = -1;
             notif->stdout_fd = -1;
             struct notification *new_notif = &tll_back(term->active_notifications);

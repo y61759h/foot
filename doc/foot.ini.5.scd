@@ -464,6 +464,12 @@ Note: do not set *TERM* here; use the *term* option in the main
 		sounds be muted. It is intended to set the *suppress-sound*
 		hint (with e.g. notify-send's *--hint* option).
 		
+		_${sound-name}_ is replaced by sound-name requested by the
+		notification. This should be a name from the freedesktop sound
+		naming specification, but this is not something that foot
+		enforces. It is intended to set the *sound-name* hint (with
+		e.g. notify-send's *--hint* option).
+		
 		_${action-argument}_ will be expanded to the
 		*command-action-argument* option, for each notification
 		action. There will always be at least one action, the
@@ -574,6 +580,7 @@ xdgtoken=95ebdfe56e4f47ddb5bba9d7dc3a2c35
 			--expire-time ${expire-time}++
 			--hint        STRING:image-path:${icon}++
 			--hint        BOOLEAN:suppress-sound:${muted}++
+			--hint        STRING:sound-name:${sound-name}++
 			--replace-id  ${replace-id}++
 			${action-argument}++
 			--print-id++

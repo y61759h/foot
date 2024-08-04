@@ -740,7 +740,7 @@ kitty_notification(struct terminal *term, char *string)
                 char reply[128];
                 int n = xsnprintf(
                     reply, sizeof(reply),
-                    "\033]99;i=%s:p=?;p=%s:a=%s:o=%s:u=%s:c=1:w=1:s=silent%s",
+                    "\033]99;i=%s:p=?;p=%s:a=%s:o=%s:u=%s:c=1:w=1:s=silent,xdg-names%s",
                     reply_id, p_caps, a_caps, when_caps, u_caps, terminator);
 
                 xassert(n < sizeof(reply));
@@ -964,6 +964,15 @@ kitty_notification(struct terminal *term, char *string)
 
     if (sound_name != NULL) {
         notif->muted = streq(sound_name, "silent");
+
+        if (notif->muted || streq(sound_name, "system")) {
+            free(notif->sound_name);
+            notif->sound_name = NULL;
+        } else {
+            free(notif->sound_name);
+            notif->sound_name = sound_name;
+            sound_name = NULL;  /* Prevent double free */
+        }
     }
 
     /* Handled chunked payload - append to existing metadata */
