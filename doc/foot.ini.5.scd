@@ -459,6 +459,11 @@ Note: do not set *TERM* here; use the *term* option in the main
 		below. Can be used together with e.g. notify-send's
 		*--replace-id* option.
 		
+		_${muted}_ is replaced by either *true* or *false*, depending
+		on whether the notification has requested all notification
+		sounds be muted. It is intended to set the *suppress-sound*
+		hint (with e.g. notify-send's *--hint* option).
+		
 		_${action-argument}_ will be expanded to the
 		*command-action-argument* option, for each notification
 		action. There will always be at least one action, the
@@ -568,6 +573,7 @@ xdgtoken=95ebdfe56e4f47ddb5bba9d7dc3a2c35
 			--urgency     ${urgency}++
 			--expire-time ${expire-time}++
 			--hint        STRING:image-path:${icon}++
+			--hint        BOOLEAN:suppress-sound:${muted}++
 			--replace-id  ${replace-id}++
 			${action-argument}++
 			--print-id++

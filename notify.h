@@ -52,6 +52,8 @@ struct notification {
     bool report_activated;  /* OSC-99: report notification activation to client */
     bool report_closed;     /* OSC-99: report notification closed to client */
 
+    bool muted;            /* Explicitly mute the notification */
+
     /*
      * Used internally by notify
      */

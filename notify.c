@@ -421,9 +421,12 @@ notify_notify(struct terminal *term, struct notification *notif)
                 ? "normal" : "critical";
 
     LOG_DBG("notify: title=\"%s\", body=\"%s\", app-id=\"%s\", category=\"%s\", "
-            "urgency=\"%s\", icon=\"%s\", expires=%d, replaces=%u (tracking: %s)",
+            "urgency=\"%s\", icon=\"%s\", expires=%d, replaces=%u, muted=%s "
+            "(tracking: %s)",
             title, body, app_id, notif->category, urgency_str, icon_name_or_path,
-            notif->expire_time, replaces_id, track_notification ? "yes" : "no");
+            notif->expire_time, replaces_id,
+            notif->muted ? "yes" : "no",
+            track_notification ? "yes" : "no");
 
     xassert(title != NULL);
     if (title == NULL)
@@ -463,14 +466,14 @@ notify_notify(struct terminal *term, struct notification *notif)
     }
 
     if (!spawn_expand_template(
-        &term->conf->desktop_notifications.command, 10,
+        &term->conf->desktop_notifications.command, 11,
         (const char *[]){
             "app-id", "window-title", "icon", "title", "body", "category",
-            "urgency", "expire-time", "replace-id", "action-argument"},
+            "urgency", "muted", "expire-time", "replace-id", "action-argument"},
         (const char *[]){
             app_id, term->window_title, icon_name_or_path, title, body,
             notif->category != NULL ? notif->category : "", urgency_str,
-            expire_time, replaces_id_str,
+            notif->muted ? "true" : "false", expire_time, replaces_id_str,
 
             /* Custom expansion below, since we need to expand to multiple arguments */
             "${action-argument}"},

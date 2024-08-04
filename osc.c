@@ -609,6 +609,7 @@ kitty_notification(struct terminal *term, char *string)
     char *icon_cache_id = NULL;    /* The 'g' parameter */
     char *symbolic_icon = NULL;    /* The 'n' parameter */
     char *category = NULL;         /* The 't' parameter */
+    char *sound_name = NULL;       /* The 's' parameter */
     char *payload = NULL;
 
     bool focus = true;             /* The 'a' parameter */
@@ -739,7 +740,7 @@ kitty_notification(struct terminal *term, char *string)
                 char reply[128];
                 int n = xsnprintf(
                     reply, sizeof(reply),
-                    "\033]99;i=%s:p=?;p=%s:a=%s:o=%s:u=%s:c=1:w=1%s",
+                    "\033]99;i=%s:p=?;p=%s:a=%s:o=%s:u=%s:c=1:w=1:s=silent%s",
                     reply_id, p_caps, a_caps, when_caps, u_caps, terminator);
 
                 xassert(n < sizeof(reply));
@@ -783,10 +784,15 @@ kitty_notification(struct terminal *term, char *string)
             break;
         }
 
-        case 'f':
-            free(app_id);
-            app_id = base64_decode(value, NULL);
+        case 'f': {
+            /* App-name */
+            char *decoded = base64_decode(value, NULL);
+            if (decoded != NULL) {
+                free(app_id);
+                app_id = decoded;
+            }
             break;
+        }
 
         case 't': {
             /* Type (category) */
@@ -801,6 +807,16 @@ kitty_notification(struct terminal *term, char *string)
                     free(decoded);
                     free(old_category);
                 }
+            }
+            break;
+        }
+
+        case 's': {
+            /* Sound */
+            char *decoded = base64_decode(value, NULL);
+            if (decoded != NULL) {
+                free(sound_name);
+                sound_name = decoded;
             }
             break;
         }
@@ -946,6 +962,10 @@ kitty_notification(struct terminal *term, char *string)
         }
     }
 
+    if (sound_name != NULL) {
+        notif->muted = streq(sound_name, "silent");
+    }
+
     /* Handled chunked payload - append to existing metadata */
     switch (payload_type) {
     case PAYLOAD_TITLE:
@@ -1067,6 +1087,7 @@ out:
     free(symbolic_icon);
     free(payload);
     free(category);
+    free(sound_name);
 }
 
 void
