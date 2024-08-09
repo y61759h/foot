@@ -2627,6 +2627,32 @@ render_csd_button_close(struct terminal *term, struct buffer *buf)
     pixman_image_unref(src);
 }
 
+static bool
+any_pointer_is_on_button(const struct terminal *term, enum csd_surface csd_surface)
+{
+    if (unlikely(tll_length(term->wl->seats) == 0))
+        return false;
+
+    tll_foreach(term->wl->seats, it) {
+        const struct seat *seat = &it->item;
+
+        if (seat->mouse.x < 0)
+            continue;
+        if (seat->mouse.y < 0)
+            continue;
+
+        struct csd_data info = get_csd_data(term, csd_surface);
+        if (seat->mouse.x > info.width)
+            continue;
+
+        if (seat->mouse.y > info.height)
+            continue;
+        return true;
+    }
+
+    return false;
+}
+
 static void
 render_csd_button(struct terminal *term, enum csd_surface surf_idx,
                   const struct csd_data *info, struct buffer *buf)
@@ -2650,21 +2676,24 @@ render_csd_button(struct terminal *term, enum csd_surface surf_idx,
         _color = term->conf->colors.table[4];  /* blue */
         is_set = term->conf->csd.color.minimize_set;
         conf_color = &term->conf->csd.color.minimize;
-        is_active = term->active_surface == TERM_SURF_BUTTON_MINIMIZE;
+        is_active = term->active_surface == TERM_SURF_BUTTON_MINIMIZE &&
+                    any_pointer_is_on_button(term, CSD_SURF_MINIMIZE);
         break;
 
     case CSD_SURF_MAXIMIZE:
         _color = term->conf->colors.table[2];  /* green */
         is_set = term->conf->csd.color.maximize_set;
         conf_color = &term->conf->csd.color.maximize;
-        is_active = term->active_surface == TERM_SURF_BUTTON_MAXIMIZE;
+        is_active = term->active_surface == TERM_SURF_BUTTON_MAXIMIZE &&
+                    any_pointer_is_on_button(term, CSD_SURF_MAXIMIZE);
         break;
 
     case CSD_SURF_CLOSE:
         _color = term->conf->colors.table[1];  /* red */
         is_set = term->conf->csd.color.close_set;
         conf_color = &term->conf->csd.color.quit;
-        is_active = term->active_surface == TERM_SURF_BUTTON_CLOSE;
+        is_active = term->active_surface == TERM_SURF_BUTTON_CLOSE &&
+                    any_pointer_is_on_button(term, CSD_SURF_CLOSE);
         break;
 
     default:
