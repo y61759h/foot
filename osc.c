@@ -740,7 +740,7 @@ kitty_notification(struct terminal *term, char *string)
                 char reply[128];
                 int n = xsnprintf(
                     reply, sizeof(reply),
-                    "\033]99;i=%s:p=?;p=%s:a=%s:o=%s:u=%s:c=1:w=1:s=silent,xdg-names%s",
+                    "\033]99;i=%s:p=?;p=%s:a=%s:o=%s:u=%s:c=1:w=1:s=system,silent,error,warn,warning,info,question%s",
                     reply_id, p_caps, a_caps, when_caps, u_caps, terminator);
 
                 xassert(n < sizeof(reply));
@@ -817,6 +817,22 @@ kitty_notification(struct terminal *term, char *string)
             if (decoded != NULL) {
                 free(sound_name);
                 sound_name = decoded;
+
+                const char *translated_name = NULL;
+
+                if (streq(decoded, "error"))
+                    translated_name = "dialog-error";
+                else if (streq(decoded, "warn") || streq(decoded, "warning"))
+                    translated_name = "dialog-warning";
+                else if (streq(decoded, "info"))
+                    translated_name = "dialog-information";
+                else if (streq(decoded, "question"))
+                    translated_name = "dialog-question";
+
+                if (translated_name != NULL) {
+                    free(sound_name);
+                    sound_name = xstrdup(translated_name);
+                }
             }
             break;
         }
