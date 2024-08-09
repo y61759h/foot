@@ -13,12 +13,15 @@ is_debug_build = get_option('buildtype').startswith('debug')
 cc = meson.get_compiler('c')
 
 if cc.has_function('memfd_create',
-                   args: ['-D_GNU_SOURCE'], prefix: '#include <sys/mman.h>')
+                   args: ['-D_GNU_SOURCE'],
+                   prefix: '#include <sys/mman.h>')
   add_project_arguments('-DMEMFD_CREATE', language: 'c')
 endif
 
 # Missing on DragonFly, FreeBSD < 14.1
-if cc.has_function('execvpe')
+if cc.has_function('execvpe',
+                   args: ['-D_GNU_SOURCE'],
+                   prefix: '#include <unistd.h>')
   add_project_arguments('-DEXECVPE', language: 'c')
 endif
 
