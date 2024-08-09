@@ -158,6 +158,7 @@ emit_one_notification(int fd, const struct user_notification *notif)
     xassert(prefix != NULL);
 
     if (write(fd, prefix, strlen(prefix)) < 0 ||
+        write(fd, "foot: ", 6) < 0 ||
         write(fd, notif->text, strlen(notif->text)) < 0 ||
         write(fd, postfix, strlen(postfix)) < 0)
     {
@@ -180,7 +181,8 @@ emit_one_notification(int fd, const struct user_notification *notif)
 }
 
 static bool
-emit_notifications_of_kind(int fd, const user_notifications_t *notifications,
+emit_notifications_of_kind(int fd,
+                           const user_notifications_t *notifications,
                            enum user_notification_kind kind)
 {
     tll_foreach(*notifications, it) {
