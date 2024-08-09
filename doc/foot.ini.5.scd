@@ -179,9 +179,10 @@ empty string to be set, but it must be quoted: *KEY=""*)
 
 	Default: _unset_
 
-*box-drawings-uses-font-glyphs* Boolean. When disabled, foot generates
-	box/line drawing characters itself. The are several advantages to
-	doing this instead of using font glyphs:
+*box-drawings-uses-font-glyphs*
+	Boolean. When disabled, foot generates box/line drawing characters
+	itself. The are several advantages to doing this instead of using
+	font glyphs:
 	
 		- No antialiasing effects where e.g. line endpoints appear
 		  dimmed down, or blurred.
@@ -194,6 +195,13 @@ empty string to be set, but it must be quoted: *KEY=""*)
 	
 	When enabled, box/line drawing characters are rendered using font
 	glyphs. This may result in a more uniform look, in some use cases.
+	
+	When disabled, foot will render the following Unicode codepoints
+	by itself:
+	
+		- U+02500 - U+0259F
+		- U+02800 - U+028FF
+		- U+1Fb00 - U+1FB9B
 	
 	Default: _no_.
 
