@@ -425,19 +425,18 @@ main(int argc, char *const *argv)
          * that does not exist on this system, then the above call may return
          * NULL. We should just continue with the fallback method below.
          */
-        LOG_WARN("setlocale() failed");
-        locale = "C";
+        LOG_ERR("setlocale() failed");
     }
 
-    LOG_INFO("locale: %s", locale);
+    LOG_INFO("locale: %s", locale != NULL ? locale : "<invalid>");
 
-    bool bad_locale = !locale_is_utf8();
+    bool bad_locale = locale == NULL || !locale_is_utf8();
     if (bad_locale) {
         static const char fallback_locales[][12] = {
             "C.UTF-8",
             "en_US.UTF-8",
         };
-        char *saved_locale = xstrdup(locale);
+        char *saved_locale = locale != NULL ? xstrdup(locale) : NULL;
 
         /*
          * Try to force an UTF-8 locale. If we succeed, launch the
@@ -448,13 +447,23 @@ main(int argc, char *const *argv)
             const char *const fallback_locale = fallback_locales[i];
 
             if (setlocale(LC_CTYPE, fallback_locale) != NULL) {
-                LOG_WARN("'%s' is not a UTF-8 locale, using '%s' instead",
-                         saved_locale, fallback_locale);
+                if (saved_locale != NULL) {
+                    LOG_WARN(
+                        "'%s' is not a UTF-8 locale, falling back to '%s'",
+                        saved_locale, fallback_locale);
 
-                user_notification_add_fmt(
-                    &user_notifications, USER_NOTIFICATION_WARNING,
-                    "'%s' is not a UTF-8 locale, using '%s' instead",
-                    saved_locale, fallback_locale);
+                    user_notification_add_fmt(
+                        &user_notifications, USER_NOTIFICATION_WARNING,
+                        "'%s' is not a UTF-8 locale, falling back to '%s'",
+                        saved_locale, fallback_locale);
+
+                } else {
+                    LOG_WARN(
+                        "invalid locale, falling back to '%s'", fallback_locale);
+                    user_notification_add_fmt(
+                        &user_notifications, USER_NOTIFICATION_WARNING,
+                        "invalid locale, falling back to '%s'", fallback_locale);
+                }
 
                 bad_locale = false;
                 break;
@@ -462,14 +471,22 @@ main(int argc, char *const *argv)
         }
 
         if (bad_locale) {
-            LOG_ERR(
-                "'%s' is not a UTF-8 locale, and failed to find a fallback",
-                saved_locale);
+            if (saved_locale != NULL) {
+                LOG_ERR(
+                    "'%s' is not a UTF-8 locale, and failed to find a fallback",
+                    saved_locale);
 
-            user_notification_add_fmt(
-                &user_notifications, USER_NOTIFICATION_ERROR,
-                "'%s' is not a UTF-8 locale, and failed to find a fallback",
-                saved_locale);
+                user_notification_add_fmt(
+                    &user_notifications, USER_NOTIFICATION_ERROR,
+                    "'%s' is not a UTF-8 locale, and failed to find a fallback",
+                    saved_locale);
+            } else {
+                LOG_ERR("invalid locale, and failed to find a fallback");
+
+                user_notification_add_fmt(
+                    &user_notifications, USER_NOTIFICATION_ERROR,
+                    "invalid locale, and failed to find a fallback");
+            }
         }
         free(saved_locale);
     }
