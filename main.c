@@ -425,7 +425,8 @@ main(int argc, char *const *argv)
          * that does not exist on this system, then the above call may return
          * NULL. We should just continue with the fallback method below.
          */
-        LOG_ERR("setlocale() failed");
+        LOG_ERR("setlocale() failed. The most common cause is that the "
+                "configured locale is not available, or has been misspelled");
     }
 
     LOG_INFO("locale: %s", locale != NULL ? locale : "<invalid>");
