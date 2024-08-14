@@ -72,6 +72,13 @@
 ### Deprecated
 ### Removed
 ### Fixed
+
+* Regression: OSC-111 not handling alpha changes correctly, causing
+  visual glitches ([#1801][1801]).
+
+[1801]: https://codeberg.org/dnkl/foot/issues/1801
+
+
 ### Security
 ### Contributors
 

@@ -1381,13 +1381,22 @@ osc_dispatch(struct terminal *term)
         term_damage_color(term, COLOR_DEFAULT, 0);
         break;
 
-    case 111: /* Reset default text background color */
+    case 111: { /* Reset default text background color */
         LOG_DBG("resetting background color");
+        bool alpha_changed = term->colors.alpha != term->conf->colors.alpha;
+
         term->colors.bg = term->conf->colors.bg;
         term->colors.alpha = term->conf->colors.alpha;
+
+        if (alpha_changed) {
+            wayl_win_alpha_changed(term->window);
+            term_font_subpixel_changed(term);
+        }
+
         term_damage_color(term, COLOR_DEFAULT, 0);
         term_damage_margins(term);
         break;
+    }
 
     case 112:
         LOG_DBG("resetting cursor color");
