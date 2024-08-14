@@ -994,7 +994,7 @@ reload_fonts(struct terminal *term, bool resize_grid)
                 snprintf(size, sizeof(size), ":size=%.2f",
                          term->font_sizes[i][j].pt_size * scale);
 
-            names[i][j] = xstrjoin(font->pattern, size, 0);
+            names[i][j] = xstrjoin(font->pattern, size);
         }
     }
 
@@ -1021,9 +1021,9 @@ reload_fonts(struct terminal *term, bool resize_grid)
 
     char *attrs[4] = {
         [0] = dpi, /* Takes ownership */
-        [1] = xstrjoin(dpi, !custom_bold ? ":weight=bold" : "", 0),
-        [2] = xstrjoin(dpi, !custom_italic ? ":slant=italic" : "", 0),
-        [3] = xstrjoin(dpi, !custom_bold_italic ? ":weight=bold:slant=italic" : "", 0),
+        [1] = xstrjoin(dpi, !custom_bold ? ":weight=bold" : ""),
+        [2] = xstrjoin(dpi, !custom_italic ? ":slant=italic" : ""),
+        [3] = xstrjoin(dpi, !custom_bold_italic ? ":weight=bold:slant=italic" : ""),
     };
 
     struct fcft_font *fonts[4];
@@ -1048,8 +1048,10 @@ reload_fonts(struct terminal *term, bool resize_grid)
     for (size_t i = 0; i < 4; i++) {
         if (tids[i] != 0) {
             int ret;
-            thrd_join(tids[i], &ret);
-            success = success && ret;
+            if (thrd_join(tids[i], &ret) != 0)
+                success = false;
+            else
+                success = success && ret;
         } else
             success = false;
     }

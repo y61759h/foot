@@ -1,5 +1,6 @@
 # Changelog
 
+* [Unreleased](#unreleased)
 * [1.18.0](#1-18-0)
 * [1.17.2](#1-17-2)
 * [1.17.1](#1-17-1)
@@ -50,6 +51,36 @@
 * [1.2.2](#1-2-2)
 * [1.2.1](#1-2-1)
 * [1.2.0](#1-2-0)
+
+
+## Unreleased
+### Added
+
+* OSC-99: support for the `s` parameter. Supported keywords are
+  `silent`, `system` and names from the freedesktop sound naming
+  specification.
+* `${muted}` and `${sound-name}` added to the
+  `desktop-notifications.command` template.
+
+
+### Changed
+
+* CSD buttons now activate on mouse button **release**, rather than
+  press ([#1787][1787]).
+
+
+### Deprecated
+### Removed
+### Fixed
+
+* Regression: OSC-111 not handling alpha changes correctly, causing
+  visual glitches ([#1801][1801]).
+
+[1801]: https://codeberg.org/dnkl/foot/issues/1801
+
+
+### Security
+### Contributors
 
 
 ## 1.18.0

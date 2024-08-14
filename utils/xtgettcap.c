@@ -141,6 +141,9 @@ main(int argc, const char *const *argv)
                 const char *key = strtok(key_value, "=");
                 const char *value = strtok(NULL, "=");
 
+                if (key == NULL)
+                    continue;
+
 #if 0
                 assert((success && value != NULL) ||
                        (!success && value == NULL));

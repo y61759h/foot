@@ -52,6 +52,9 @@ struct notification {
     bool report_activated;  /* OSC-99: report notification activation to client */
     bool report_closed;     /* OSC-99: report notification closed to client */
 
+    bool muted;            /* Explicitly mute the notification */
+    char *sound_name;      /* Should be set to NULL if muted == true */
+
     /*
      * Used internally by notify
      */

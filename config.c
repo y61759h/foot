@@ -356,9 +356,9 @@ open_config(void)
 
     /* First, check XDG_CONFIG_HOME (or .config, if unset) */
     if (xdg_config_home != NULL && xdg_config_home[0] != '\0')
-        path = xstrjoin(xdg_config_home, "/foot/foot.ini", 0);
+        path = xstrjoin(xdg_config_home, "/foot/foot.ini");
     else if (home_dir != NULL)
-        path = xstrjoin(home_dir, "/.config/foot/foot.ini", 0);
+        path = xstrjoin(home_dir, "/.config/foot/foot.ini");
 
     if (path != NULL) {
         LOG_DBG("checking for %s", path);
@@ -383,7 +383,7 @@ open_config(void)
          conf_dir = strtok(NULL, ":"))
     {
         free(path);
-        path = xstrjoin(conf_dir, "/foot/foot.ini", 0);
+        path = xstrjoin(conf_dir, "/foot/foot.ini");
 
         LOG_DBG("checking for %s", path);
         int fd = open(path, O_RDONLY | O_CLOEXEC);
@@ -843,7 +843,7 @@ parse_section_main(struct context *ctx)
                 return false;
             }
 
-            _include_path = xasprintf("%s/%s", home_dir, value + 2);
+            _include_path = xstrjoin3(home_dir, "/", value + 2);
             include_path = _include_path;
         } else
             include_path = value;
@@ -2931,7 +2931,7 @@ get_server_socket_path(void)
 
     const char *wayland_display = getenv("WAYLAND_DISPLAY");
     if (wayland_display == NULL) {
-        return xstrjoin(xdg_runtime, "/foot.sock", 0);
+        return xstrjoin(xdg_runtime, "/foot.sock");
     }
 
     return xasprintf("%s/foot-%s.sock", xdg_runtime, wayland_display);
@@ -3242,7 +3242,7 @@ config_load(struct config *conf, const char *conf_path,
     parse_modifiers(XKB_MOD_NAME_SHIFT, 5, &conf->mouse.selection_override_modifiers);
 
     tokenize_cmdline(
-        "notify-send --wait --app-name ${app-id} --icon ${app-id} --category ${category} --urgency ${urgency} --expire-time ${expire-time} --hint STRING:image-path:${icon} --replace-id ${replace-id} ${action-argument} --print-id -- ${title} ${body}",
+        "notify-send --wait --app-name ${app-id} --icon ${app-id} --category ${category} --urgency ${urgency} --expire-time ${expire-time} --hint STRING:image-path:${icon} --hint BOOLEAN:suppress-sound:${muted} --hint STRING:sound-name:${sound-name} --replace-id ${replace-id} ${action-argument} --print-id -- ${title} ${body}",
         &conf->desktop_notifications.command.argv.args);
     tokenize_cmdline("--action ${action-name}=${action-label}", &conf->desktop_notifications.command_action_arg.argv.args);
     tokenize_cmdline("xdg-open ${url}", &conf->url.launch.argv.args);

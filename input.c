@@ -2053,6 +2053,25 @@ wl_pointer_leave(void *data, struct wl_pointer *wl_pointer,
     }
 }
 
+static bool
+pointer_is_on_button(const struct terminal *term, const struct seat *seat,
+                     enum csd_surface csd_surface)
+{
+    if (seat->mouse.x < 0)
+        return false;
+    if (seat->mouse.y < 0)
+        return false;
+
+    struct csd_data info = get_csd_data(term, csd_surface);
+    if (seat->mouse.x > info.width)
+        return false;
+
+    if (seat->mouse.y > info.height)
+        return false;
+
+    return true;
+}
+
 static void
 wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
                   uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y)
@@ -2085,15 +2104,41 @@ wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
     int x = wl_fixed_to_int(surface_x) * term->scale;
     int y = wl_fixed_to_int(surface_y) * term->scale;
 
+    enum term_surface surf_kind = term->active_surface;
+    int button = 0;
+    bool send_to_client = false;
+    bool is_on_button = false;
+
+    /* If current surface is a button, check if pointer was on it
+       *before* the motion event */
+    switch (surf_kind) {
+    case TERM_SURF_BUTTON_MINIMIZE:
+        is_on_button = pointer_is_on_button(term, seat, CSD_SURF_MINIMIZE);
+        break;
+
+    case TERM_SURF_BUTTON_MAXIMIZE:
+        is_on_button = pointer_is_on_button(term, seat, CSD_SURF_MAXIMIZE);
+        break;
+
+    case TERM_SURF_BUTTON_CLOSE:
+        is_on_button = pointer_is_on_button(term, seat, CSD_SURF_CLOSE);
+        break;
+
+    case TERM_SURF_NONE:
+    case TERM_SURF_GRID:
+    case TERM_SURF_TITLE:
+    case TERM_SURF_BORDER_LEFT:
+    case TERM_SURF_BORDER_RIGHT:
+    case TERM_SURF_BORDER_TOP:
+    case TERM_SURF_BORDER_BOTTOM:
+        break;
+    }
+
     seat->pointer.hidden = false;
     seat->mouse.x = x;
     seat->mouse.y = y;
 
     term_xcursor_update_for_seat(term, seat);
-
-    enum term_surface surf_kind = term->active_surface;
-    int button = 0;
-    bool send_to_client = false;
 
     if (tll_length(seat->mouse.buttons) > 0) {
         const struct button_tracker *tracker = &tll_front(seat->mouse.buttons);
@@ -2104,9 +2149,21 @@ wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
 
     switch (surf_kind) {
     case TERM_SURF_NONE:
+        break;
+
     case TERM_SURF_BUTTON_MINIMIZE:
+        if (pointer_is_on_button(term, seat, CSD_SURF_MINIMIZE) != is_on_button)
+            render_refresh_csd(term);
+        break;
+
     case TERM_SURF_BUTTON_MAXIMIZE:
+        if (pointer_is_on_button(term, seat, CSD_SURF_MAXIMIZE) != is_on_button)
+            render_refresh_csd(term);
+        break;
+
     case TERM_SURF_BUTTON_CLOSE:
+        if (pointer_is_on_button(term, seat, CSD_SURF_CLOSE) != is_on_button)
+            render_refresh_csd(term);
         break;
 
     case TERM_SURF_TITLE:
@@ -2246,8 +2303,8 @@ fdm_csd_move(struct fdm *fdm, int fd, int events, void *data)
 }
 
 static const struct key_binding *
- match_mouse_binding(const struct seat *seat, const struct terminal *term,
-                     int button)
+match_mouse_binding(const struct seat *seat, const struct terminal *term,
+                    int button)
 {
     if (seat->wl_keyboard != NULL && seat->kbd.xkb_state != NULL) {
         /* Seat has keyboard - use mouse bindings *with* modifiers */
@@ -2577,12 +2634,19 @@ wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
     }
 
     case TERM_SURF_BUTTON_MINIMIZE:
-        if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED)
+        if (button == BTN_LEFT &&
+            pointer_is_on_button(term, seat, CSD_SURF_MINIMIZE) &&
+            state == WL_POINTER_BUTTON_STATE_RELEASED)
+        {
             xdg_toplevel_set_minimized(term->window->xdg_toplevel);
+        }
         break;
 
     case TERM_SURF_BUTTON_MAXIMIZE:
-        if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED) {
+        if (button == BTN_LEFT &&
+            pointer_is_on_button(term, seat, CSD_SURF_MAXIMIZE) &&
+            state == WL_POINTER_BUTTON_STATE_RELEASED)
+        {
             if (term->window->is_maximized)
                 xdg_toplevel_unset_maximized(term->window->xdg_toplevel);
             else
@@ -2591,8 +2655,12 @@ wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
         break;
 
     case TERM_SURF_BUTTON_CLOSE:
-        if (button == BTN_LEFT && state == WL_POINTER_BUTTON_STATE_PRESSED)
+        if (button == BTN_LEFT &&
+            pointer_is_on_button(term, seat, CSD_SURF_CLOSE) &&
+            state == WL_POINTER_BUTTON_STATE_RELEASED)
+        {
             term_shutdown(term);
+        }
         break;
 
     case TERM_SURF_GRID: {

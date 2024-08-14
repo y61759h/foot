@@ -179,9 +179,10 @@ empty string to be set, but it must be quoted: *KEY=""*)
 
 	Default: _unset_
 
-*box-drawings-uses-font-glyphs* Boolean. When disabled, foot generates
-	box/line drawing characters itself. The are several advantages to
-	doing this instead of using font glyphs:
+*box-drawings-uses-font-glyphs*
+	Boolean. When disabled, foot generates box/line drawing characters
+	itself. The are several advantages to doing this instead of using
+	font glyphs:
 	
 		- No antialiasing effects where e.g. line endpoints appear
 		  dimmed down, or blurred.
@@ -194,6 +195,13 @@ empty string to be set, but it must be quoted: *KEY=""*)
 	
 	When enabled, box/line drawing characters are rendered using font
 	glyphs. This may result in a more uniform look, in some use cases.
+	
+	When disabled, foot will render the following Unicode codepoints
+	by itself:
+	
+		- U+02500 - U+0259F
+		- U+02800 - U+028FF
+		- U+1Fb00 - U+1FB9B
 	
 	Default: _no_.
 
@@ -459,6 +467,17 @@ Note: do not set *TERM* here; use the *term* option in the main
 		below. Can be used together with e.g. notify-send's
 		*--replace-id* option.
 		
+		_${muted}_ is replaced by either *true* or *false*, depending
+		on whether the notification has requested all notification
+		sounds be muted. It is intended to set the *suppress-sound*
+		hint (with e.g. notify-send's *--hint* option).
+		
+		_${sound-name}_ is replaced by sound-name requested by the
+		notification. This should be a name from the freedesktop sound
+		naming specification, but this is not something that foot
+		enforces. It is intended to set the *sound-name* hint (with
+		e.g. notify-send's *--hint* option).
+		
 		_${action-argument}_ will be expanded to the
 		*command-action-argument* option, for each notification
 		action. There will always be at least one action, the
@@ -568,6 +587,8 @@ xdgtoken=95ebdfe56e4f47ddb5bba9d7dc3a2c35
 			--urgency     ${urgency}++
 			--expire-time ${expire-time}++
 			--hint        STRING:image-path:${icon}++
+			--hint        BOOLEAN:suppress-sound:${muted}++
+			--hint        STRING:sound-name:${sound-name}++
 			--replace-id  ${replace-id}++
 			${action-argument}++
 			--print-id++

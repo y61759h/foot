@@ -564,6 +564,33 @@ osc_notify(struct terminal *term, char *string)
     });
 }
 
+IGNORE_WARNING("-Wpedantic")
+static bool
+verify_kitty_id_is_valid(const char *id)
+{
+    const size_t len = strlen(id);
+
+    for (size_t i = 0; i < len; i++) {
+        switch (id[i]) {
+        case 'a' ... 'z':
+        case 'A' ... 'Z':
+        case '0' ... '9':
+        case '_':
+        case '-':
+        case '+':
+        case '.':
+            break;
+
+        default:
+            return false;
+        }
+    }
+
+    return true;
+}
+UNIGNORE_WARNINGS
+
+
 static void
 kitty_notification(struct terminal *term, char *string)
 {
@@ -582,6 +609,7 @@ kitty_notification(struct terminal *term, char *string)
     char *icon_cache_id = NULL;    /* The 'g' parameter */
     char *symbolic_icon = NULL;    /* The 'n' parameter */
     char *category = NULL;         /* The 't' parameter */
+    char *sound_name = NULL;       /* The 's' parameter */
     char *payload = NULL;
 
     bool focus = true;             /* The 'a' parameter */
@@ -672,8 +700,11 @@ kitty_notification(struct terminal *term, char *string)
 
         case 'i':
             /* id */
-            free(id);
-            id = xstrdup(value);
+            if (verify_kitty_id_is_valid(value)) {
+                free(id);
+                id = xstrdup(value);
+            } else
+                LOG_WARN("OSC-99: ignoring invalid 'i' identifier");
             break;
 
         case 'p':
@@ -709,7 +740,7 @@ kitty_notification(struct terminal *term, char *string)
                 char reply[128];
                 int n = xsnprintf(
                     reply, sizeof(reply),
-                    "\033]99;i=%s:p=?;p=%s:a=%s:o=%s:u=%s:c=1:w=1%s",
+                    "\033]99;i=%s:p=?;p=%s:a=%s:o=%s:u=%s:c=1:w=1:s=system,silent,error,warn,warning,info,question%s",
                     reply_id, p_caps, a_caps, when_caps, u_caps, terminator);
 
                 xassert(n < sizeof(reply));
@@ -753,10 +784,15 @@ kitty_notification(struct terminal *term, char *string)
             break;
         }
 
-        case 'f':
-            free(app_id);
-            app_id = base64_decode(value, NULL);
+        case 'f': {
+            /* App-name */
+            char *decoded = base64_decode(value, NULL);
+            if (decoded != NULL) {
+                free(app_id);
+                app_id = decoded;
+            }
             break;
+        }
 
         case 't': {
             /* Type (category) */
@@ -767,9 +803,35 @@ kitty_notification(struct terminal *term, char *string)
                 else {
                     /* Append, comma separated */
                     char *old_category = category;
-                    category = xstrjoin(old_category, decoded, ',');
+                    category = xstrjoin3(old_category, ",", decoded);
                     free(decoded);
                     free(old_category);
+                }
+            }
+            break;
+        }
+
+        case 's': {
+            /* Sound */
+            char *decoded = base64_decode(value, NULL);
+            if (decoded != NULL) {
+                free(sound_name);
+                sound_name = decoded;
+
+                const char *translated_name = NULL;
+
+                if (streq(decoded, "error"))
+                    translated_name = "dialog-error";
+                else if (streq(decoded, "warn") || streq(decoded, "warning"))
+                    translated_name = "dialog-warning";
+                else if (streq(decoded, "info"))
+                    translated_name = "dialog-information";
+                else if (streq(decoded, "question"))
+                    translated_name = "dialog-question";
+
+                if (translated_name != NULL) {
+                    free(sound_name);
+                    sound_name = xstrdup(translated_name);
                 }
             }
             break;
@@ -910,9 +972,22 @@ kitty_notification(struct terminal *term, char *string)
             category = NULL;  /* Prevent double free */
         } else {
             /* Append, comma separated */
-            char *new_category = xstrjoin(notif->category, category, ',');
+            char *new_category = xstrjoin3(notif->category, ",", category);
             free(notif->category);
             notif->category = new_category;
+        }
+    }
+
+    if (sound_name != NULL) {
+        notif->muted = streq(sound_name, "silent");
+
+        if (notif->muted || streq(sound_name, "system")) {
+            free(notif->sound_name);
+            notif->sound_name = NULL;
+        } else {
+            free(notif->sound_name);
+            notif->sound_name = sound_name;
+            sound_name = NULL;  /* Prevent double free */
         }
     }
 
@@ -929,7 +1004,7 @@ kitty_notification(struct terminal *term, char *string)
             payload = NULL;
         } else {
             char *old = *ptr;
-            *ptr = xstrjoin(old, payload, 0);
+            *ptr = xstrjoin(old, payload);
             free(old);
         }
         break;
@@ -963,7 +1038,7 @@ kitty_notification(struct terminal *term, char *string)
                 tll_push_back(notif->actions, xstrdup(button));
             }
         }
-        
+
         break;
     }
     }
@@ -1002,7 +1077,7 @@ kitty_notification(struct terminal *term, char *string)
                     alive_ids = xstrdup(item_id);
                 else {
                     char *old_alive_ids = alive_ids;
-                    alive_ids = xstrjoin(old_alive_ids, item_id, ',');
+                    alive_ids = xstrjoin3(old_alive_ids, ",", item_id);
                     free(old_alive_ids);
                 }
             }
@@ -1037,6 +1112,7 @@ out:
     free(symbolic_icon);
     free(payload);
     free(category);
+    free(sound_name);
 }
 
 void
@@ -1305,13 +1381,22 @@ osc_dispatch(struct terminal *term)
         term_damage_color(term, COLOR_DEFAULT, 0);
         break;
 
-    case 111: /* Reset default text background color */
+    case 111: { /* Reset default text background color */
         LOG_DBG("resetting background color");
+        bool alpha_changed = term->colors.alpha != term->conf->colors.alpha;
+
         term->colors.bg = term->conf->colors.bg;
         term->colors.alpha = term->conf->colors.alpha;
+
+        if (alpha_changed) {
+            wayl_win_alpha_changed(term->window);
+            term_font_subpixel_changed(term);
+        }
+
         term_damage_color(term, COLOR_DEFAULT, 0);
         term_damage_margins(term);
         break;
+    }
 
     case 112:
         LOG_DBG("resetting cursor color");
