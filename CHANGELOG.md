@@ -1,6 +1,6 @@
 # Changelog
 
-* [Unreleased](#unreleased)
+* [1.18.1](#1-18-1)
 * [1.18.0](#1-18-0)
 * [1.17.2](#1-17-2)
 * [1.17.1](#1-17-1)
@@ -53,7 +53,8 @@
 * [1.2.0](#1-2-0)
 
 
-## Unreleased
+## 1.18.1
+
 ### Added
 
 * OSC-99: support for the `s` parameter. Supported keywords are
@@ -69,8 +70,6 @@
   press ([#1787][1787]).
 
 
-### Deprecated
-### Removed
 ### Fixed
 
 * Regression: OSC-111 not handling alpha changes correctly, causing
@@ -79,8 +78,10 @@
 [1801]: https://codeberg.org/dnkl/foot/issues/1801
 
 
-### Security
 ### Contributors
+
+* Craig Barnes
+* Shogo Yamazaki
 
 
 ## 1.18.0
