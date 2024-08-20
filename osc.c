@@ -547,12 +547,12 @@ osc_notify(struct terminal *term, char *string)
     if (title == NULL)
         return;
 
-    if (mbsntoc32(NULL, title, strlen(title), 0) == (char32_t)-1) {
+    if (mbsntoc32(NULL, title, strlen(title), 0) == (size_t)-1) {
         LOG_WARN("%s: notification title is not valid UTF-8, ignoring", title);
         return;
     }
 
-    if (msg != NULL && mbsntoc32(NULL, msg, strlen(msg), 0) == (char32_t)-1) {
+    if (msg != NULL && mbsntoc32(NULL, msg, strlen(msg), 0) == (size_t)-1) {
         LOG_WARN("%s: notification message is not valid UTF-8, ignoring", msg);
         return;
     }
