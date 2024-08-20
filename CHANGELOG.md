@@ -85,6 +85,8 @@
 * CSD buttons now activate on mouse button **release**, rather than
   press ([#1787][1787]).
 
+[1787]: https://codeberg.org/dnkl/foot/issues/1787
+
 
 ### Fixed
 
