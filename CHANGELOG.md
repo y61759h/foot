@@ -56,6 +56,14 @@
 
 ## Unreleased
 ### Added
+
+* `resize-keep-grid` option, controlling whether the window is resized
+  (and the grid reflowed) or not when e.g. zooming in/out
+  ([#1807][1807]).
+
+[1807]: https://codeberg.org/dnkl/foot/issues/1807
+
+
 ### Changed
 
 * `cursor.unfocused-style` is now effective even when `cursor.style`
