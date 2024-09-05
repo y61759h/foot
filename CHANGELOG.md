@@ -69,6 +69,14 @@
 
 * `cursor.unfocused-style` is now effective even when `cursor.style`
   is not `block`.
+* Activating a notification triggered with OSC-777, or BEL, now
+  focuses the foot window, if XDG activation tokens are supported by
+  the compositor, the notification daemon, and the notification helper
+  used by foot (i.e. `desktop-notifications.command`). This has been
+  supported for OSC-99 since 1.18.0, and now we also support it for
+  BEL and OSC-777 ([#1822][1822]).
+
+[1822]: https://codeberg.org/dnkl/foot/issues/1822
 
 
 ### Deprecated

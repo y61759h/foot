@@ -3597,9 +3597,10 @@ term_bell(struct terminal *term)
 
     if (term->conf->bell.notify) {
         notify_notify(term, &(struct notification){
-            .title = (char *)"Bell",
-            .body = (char *)"Bell in terminal",
+            .title = xstrdup("Bell"),
+            .body = xstrdup("Bell in terminal"),
             .expire_time = -1,
+            .focus = true,
         });
     }
 

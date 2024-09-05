@@ -558,9 +558,10 @@ osc_notify(struct terminal *term, char *string)
     }
 
     notify_notify(term, &(struct notification){
-        .title = (char *)title,
-        .body = (char *)msg,
+        .title = xstrdup(title),
+        .body = xstrdup(msg),
         .expire_time = -1,
+        .focus = true,
     });
 }
 
