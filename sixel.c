@@ -127,40 +127,11 @@ sixel_init(struct terminal *term, int p1, int p2, int p3)
         term->sixel.palette = term->sixel.shared_palette;
     }
 
-    uint32_t bg = 0;
+    if (term->sixel.transparent_bg)
+        term->sixel.default_bg = 0x00000000u;
+    else
+        term->sixel.default_bg = term->sixel.palette[0];
 
-    switch (term->vt.attrs.bg_src) {
-    case COLOR_RGB:
-        bg = 0xffu << 24 | term->vt.attrs.bg;
-        break;
-
-    case COLOR_BASE16:
-    case COLOR_BASE256:
-        bg = 0xffu << 24 | term->colors.table[term->vt.attrs.bg];
-        break;
-
-    case COLOR_DEFAULT:
-        if (term->colors.alpha == 0xffff)
-            bg = 0xffu << 24 | term->colors.bg;
-        else {
-            /* Alpha needs to be pre-multiplied */
-            uint32_t r = (term->colors.bg >> 16) & 0xff;
-            uint32_t g = (term->colors.bg >> 8) & 0xff;
-            uint32_t b = (term->colors.bg >> 0) & 0xff;
-
-            uint32_t alpha = term->colors.alpha;
-            r *= alpha; r /= 0xffff;
-            g *= alpha; g /= 0xffff;
-            b *= alpha; b /= 0xffff;
-
-            bg = (alpha >> 8) << 24 | (r & 0xff) << 16 | (g & 0xff) << 8 | (b & 0xff);
-        }
-        break;
-    }
-
-    term->sixel.default_bg = term->sixel.transparent_bg
-        ? 0x00000000u
-        : bg;
 
     count = 0;
     return pan == 1 && pad == 1 ? &sixel_put_ar_11 : &sixel_put_generic;

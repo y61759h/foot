@@ -75,6 +75,9 @@
   used by foot (i.e. `desktop-notifications.command`). This has been
   supported for OSC-99 since 1.18.0, and now we also support it for
   BEL and OSC-777 ([#1822][1822]).
+* Sixel background color (when `P2=0|2`) is now set to the **sixel**
+  color palette entry #0, instead of using the current ANSI background
+  color. This is what a real VT340 does.
 
 [1822]: https://codeberg.org/dnkl/foot/issues/1822
 
