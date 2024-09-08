@@ -20,6 +20,10 @@
 #include <xdg-output-unstable-v1.h>
 #include <xdg-shell.h>
 
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+ #include <xdg-toplevel-icon-v1.h>
+#endif
+
 #include <fcft/fcft.h>
 #include <tllist.h>
 
@@ -442,6 +446,10 @@ struct wayland {
     struct wp_cursor_shape_manager_v1 *cursor_shape_manager;
 
     struct wp_single_pixel_buffer_manager_v1 *single_pixel_manager;
+
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    struct xdg_toplevel_icon_manager_v1 *toplevel_icon_manager;
+#endif
 
     bool presentation_timings;
     struct wp_presentation *presentation;

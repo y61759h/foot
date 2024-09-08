@@ -1363,6 +1363,17 @@ handle_global(void *data, struct wl_registry *registry,
             &wp_single_pixel_buffer_manager_v1_interface, required);
     }
 
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    else if (streq(interface, xdg_toplevel_icon_v1_interface.name)) {
+        const uint32_t required = 1;
+        if (!verify_iface_version(interface, version, required))
+            return;
+
+        wayl->toplevel_icon_manager = wl_registry_bind(
+            wayl->registry, name, &xdg_toplevel_icon_v1_interface, required);
+    }
+#endif
+
 #if defined(FOOT_IME_ENABLED) && FOOT_IME_ENABLED
     else if (streq(interface, zwp_text_input_manager_v3_interface.name)) {
         const uint32_t required = 1;
@@ -1679,6 +1690,10 @@ wayl_destroy(struct wayland *wayl)
         zwp_text_input_manager_v3_destroy(wayl->text_input_manager);
 #endif
 
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    if (wayl->toplevel_icon_manager != NULL)
+        xdg_toplevel_icon_manager_v1_destroy(wayl->toplevel_icon_manager);
+#endif
     if (wayl->single_pixel_manager != NULL)
         wp_single_pixel_buffer_manager_v1_destroy(wayl->single_pixel_manager);
     if (wayl->fractional_scale_manager != NULL)
