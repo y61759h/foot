@@ -1813,9 +1813,13 @@ wayl_win_init(struct terminal *term, const char *token)
 
 #if defined(HAVE_XDG_TOPLEVEL_ICON)
     if (wayl->toplevel_icon_manager != NULL) {
+        const char *app_id =
+            term->app_id != NULL ? term->app_id : term->conf->app_id;
+
         struct xdg_toplevel_icon_v1 *icon =
             xdg_toplevel_icon_manager_v1_create_icon(wayl->toplevel_icon_manager);
-        xdg_toplevel_icon_v1_set_name(icon, "foot");
+        xdg_toplevel_icon_v1_set_name(icon, streq(
+            app_id, "footclient") ? "foot" : app_id);
         xdg_toplevel_icon_manager_v1_set_icon(
             wayl->toplevel_icon_manager, win->xdg_toplevel, icon);
         xdg_toplevel_icon_v1_destroy(icon);

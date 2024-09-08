@@ -4944,10 +4944,31 @@ render_refresh_app_id(struct terminal *term)
         };
 
         timerfd_settime(term->render.app_id.timer_fd, 0, &timeout, NULL);
-    } else {
-        term->render.app_id.last_update = now;
-        xdg_toplevel_set_app_id(term->window->xdg_toplevel, term->app_id ? term->app_id : term->conf->app_id);
+        return;
     }
+
+    const char *app_id =
+        term->app_id != NULL ? term->app_id : term->conf->app_id;
+
+    xdg_toplevel_set_app_id(term->window->xdg_toplevel, app_id);
+
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    if (term->wl->toplevel_icon_manager != NULL) {
+        struct xdg_toplevel_icon_v1 *icon =
+            xdg_toplevel_icon_manager_v1_create_icon(
+                term->wl->toplevel_icon_manager);
+
+        xdg_toplevel_icon_v1_set_name(
+            icon, streq(app_id, "footclient") ? "foot" : app_id);
+
+        xdg_toplevel_icon_manager_v1_set_icon(
+            term->wl->toplevel_icon_manager, term->window->xdg_toplevel, icon);
+
+        xdg_toplevel_icon_v1_destroy(icon);
+    }
+#endif
+
+    term->render.app_id.last_update = now;
 }
 
 void
