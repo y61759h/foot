@@ -1811,6 +1811,17 @@ wayl_win_init(struct terminal *term, const char *token)
 
     xdg_toplevel_set_app_id(win->xdg_toplevel, conf->app_id);
 
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    if (wayl->toplevel_icon_manager != NULL) {
+        struct xdg_toplevel_icon_v1 *icon =
+            xdg_toplevel_icon_manager_v1_create_icon(wayl->toplevel_icon_manager);
+        xdg_toplevel_icon_v1_set_name(icon, "foot");
+        xdg_toplevel_icon_manager_v1_set_icon(
+            wayl->toplevel_icon_manager, win->xdg_toplevel, icon);
+        xdg_toplevel_icon_v1_destroy(icon);
+    }
+#endif
+
     if (conf->csd.preferred == CONF_CSD_PREFER_NONE) {
         /* User specifically do *not* want decorations */
         win->csd_mode = CSD_NO;
