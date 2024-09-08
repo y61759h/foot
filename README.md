@@ -684,7 +684,7 @@ available at https://libera.irclog.whitequark.org/foot.
 ## Mastodon
 
 Every now and then I post foot related updates on
-[@dnkl@emacs.ch](https://emacs.ch/@dnkl)
+[@dnkl@social.treehouse.systems](https://social.treehouse.systems/@dnkl)
 
 
 # Sponsoring/donations
