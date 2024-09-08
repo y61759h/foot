@@ -78,8 +78,12 @@
 * Sixel background color (when `P2=0|2`) is now set to the **sixel**
   color palette entry #0, instead of using the current ANSI background
   color. This is what a real VT340 does.
+* The `.desktop` files no longer use the reverse DNS naming scheme,
+  and their names now match the default app-ids used by foot (`foot`
+  and `footclient`) ([#1607][1607]).
 
 [1822]: https://codeberg.org/dnkl/foot/issues/1822
+[1607]: https://codeberg.org/dnkl/foot/issues/1607
 
 
 ### Deprecated
