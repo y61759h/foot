@@ -9,4 +9,3 @@ Keywords=shell;prompt;command;commandline;
 Name=Foot Client
 GenericName=Terminal
 Comment=A wayland native terminal emulator (client)
-StartupWMClass=footclient
