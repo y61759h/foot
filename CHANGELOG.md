@@ -61,6 +61,7 @@
   (and the grid reflowed) or not when e.g. zooming in/out
   ([#1807][1807]).
 * `strikeout-thickness` option.
+* Implemented the new `xdg-toplevel-icon-v1` protocol.
 
 [1807]: https://codeberg.org/dnkl/foot/issues/1807
 
