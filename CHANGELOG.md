@@ -93,6 +93,11 @@
 * Some invalid UTF-8 strings passing the validity check when setting
   the window title, triggering a Wayland protocol error which then
   caused foot to shutdown.
+* "Too large" values for `scrollback.lines` causing an integer
+  overflow, resulting in either visual glitches, crashes, or both
+  ([#1828][1828]).
+
+[1828]: https://codeberg.org/dnkl/foot/issues/1828
 
 
 ### Security

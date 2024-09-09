@@ -4369,8 +4369,6 @@ render_resize(struct terminal *term, int width, int height, uint8_t opts)
     term->width = width;
     term->height = height;
 
-    const uint32_t scrollback_lines = term->render.scrollback_lines;
-
     /* Screen rows/cols before resize */
     int old_cols = term->cols;
     int old_rows = term->rows;
@@ -4379,9 +4377,36 @@ render_resize(struct terminal *term, int width, int height, uint8_t opts)
     const int new_cols = (term->width - 2 * pad_x) / term->cell_width;
     const int new_rows = (term->height - 2 * pad_y) / term->cell_height;
 
+    /*
+     * Requirements for scrollback:
+     *
+     *   a) total number of rows (visible + scrollback history) must be
+     *      a power of two
+     *   b) must be representable in a plain int (signed)
+     *
+     * This means that on a "normal" system, where ints are 32-bit,
+     * the largest possible scrollback size is 1073741824 (0x40000000,
+     * 1 << 30).
+     *
+     * The largest *signed* int is 2147483647 (0x7fffffff), which is
+     * *not* a power of two.
+     *
+     * Note that these are theoretical limits. Most of the time,
+     * you'll get a memory allocation failure when trying to allocate
+     * the grid array.
+     */
+    const unsigned max_scrollback = (INT_MAX >> 1) + 1;
+    const unsigned scrollback_lines_not_yet_power_of_two =
+        min((uint64_t)term->render.scrollback_lines + new_rows - 1, max_scrollback);
+
     /* Grid rows/cols after resize */
-    const int new_normal_grid_rows = 1 << (32 - __builtin_clz(new_rows + scrollback_lines - 1));
-    const int new_alt_grid_rows = 1 << (32  - __builtin_clz(new_rows));
+    const int new_normal_grid_rows =
+        min(1u << (32 - __builtin_clz(scrollback_lines_not_yet_power_of_two)),
+            max_scrollback);
+    const int new_alt_grid_rows =
+        min(1u << (32 - __builtin_clz(new_rows)), max_scrollback);
+
+    LOG_DBG("grid rows: %d", new_normal_grid_rows);
 
     xassert(new_cols >= 1);
     xassert(new_rows >= 1);
