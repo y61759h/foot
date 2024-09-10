@@ -1249,8 +1249,6 @@ csi_dispatch(struct terminal *term, uint8_t final)
             case 8: LOG_WARN("unimplemented: resize window in chars"); break;
             case 9: LOG_WARN("unimplemented: maximize/unmaximize window"); break;
             case 10: LOG_WARN("unimplemented: to/from full screen"); break;
-            case 20: LOG_WARN("unimplemented: report icon label"); break;
-            case 21: LOG_WARN("unimplemented: report window title"); break;
             case 24: LOG_WARN("unimplemented: resize window (DECSLPP)"); break;
 
             case 11:   /* report if window is iconified */
@@ -1354,12 +1352,34 @@ csi_dispatch(struct terminal *term, uint8_t final)
                 break;
             }
 
+            case 20: {
+                const char *icon = term_icon(term);
+
+                char reply[3 + strlen(icon) + 2 + 1];
+                int chars = xsnprintf(
+                    reply, sizeof(reply), "\033]L%s\033\\", icon);
+                term_to_slave(term, reply, chars);
+                break;
+            }
+
+            case 21: {
+                char reply[3 + strlen(term->window_title) + 2 + 1];
+                int chars = xsnprintf(
+                    reply, sizeof(reply), "\033]l%s\033\\", term->window_title);
+                term_to_slave(term, reply, chars);
+                break;
+            }
+
             case 22: { /* push window title */
                 /* 0 - icon + title, 1 - icon, 2 - title */
                 unsigned what = vt_param_get(term, 1, 0);
                 if (what == 0 || what == 2) {
                     tll_push_back(
                         term->window_title_stack, xstrdup(term->window_title));
+                }
+                if (what == 0 || what == 1) {
+                    tll_push_back(
+                        term->window_icon_stack, xstrdup(term->window_icon));
                 }
                 break;
             }
@@ -1372,6 +1392,13 @@ csi_dispatch(struct terminal *term, uint8_t final)
                         char *title = tll_pop_back(term->window_title_stack);
                         term_set_window_title(term, title);
                         free(title);
+                    }
+                }
+                if (what == 0 || what == 1) {
+                    if (tll_length(term->window_icon_stack) > 0) {
+                        char *icon = tll_pop_back(term->window_icon_stack);
+                        term_set_icon(term, icon);
+                        free(icon);
                     }
                 }
                 break;

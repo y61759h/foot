@@ -552,6 +552,8 @@ struct terminal {
     bool window_title_has_been_set;
     char *window_title;
     tll(char *) window_title_stack;
+    char *window_icon;
+    tll(char *)window_icon_stack;
     char *app_id;
 
     struct {
@@ -669,6 +671,11 @@ struct terminal {
             struct timespec last_update;
             int timer_fd;
         } title;
+
+        struct {
+            struct timespec last_update;
+            int timer_fd;
+        } icon;
 
         struct {
             struct timespec last_update;
@@ -925,6 +932,8 @@ void term_set_user_mouse_cursor(struct terminal *term, const char *cursor);
 
 void term_set_window_title(struct terminal *term, const char *title);
 void term_set_app_id(struct terminal *term, const char *app_id);
+void term_set_icon(struct terminal *term, const char *icon);
+const char *term_icon(const struct terminal *term);
 void term_flash(struct terminal *term, unsigned duration_ms);
 void term_bell(struct terminal *term);
 bool term_spawn_new(const struct terminal *term);

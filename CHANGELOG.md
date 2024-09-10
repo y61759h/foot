@@ -62,6 +62,11 @@
   ([#1807][1807]).
 * `strikeout-thickness` option.
 * Implemented the new `xdg-toplevel-icon-v1` protocol.
+* Implemented `CSI 20 t`: report window icon.
+* Implemented `CSI 21 t`: report window title.
+* Implemented `CSI 22 ; 1 t`: push window icon.
+* Implemented `CSI 23 ; 1 t`: pop window icon.
+* Implemented `OSC 1`: set window icon.
 
 [1807]: https://codeberg.org/dnkl/foot/issues/1807
 

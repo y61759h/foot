@@ -640,6 +640,30 @@ fdm_title_update_timeout(struct fdm *fdm, int fd, int events, void *data)
 }
 
 static bool
+fdm_icon_update_timeout(struct fdm *fdm, int fd, int events, void *data)
+{
+    if (events & EPOLLHUP)
+        return false;
+
+    struct terminal *term = data;
+    uint64_t unused;
+    ssize_t ret = read(term->render.icon.timer_fd, &unused, sizeof(unused));
+
+    if (ret < 0) {
+        if (errno == EAGAIN)
+            return true;
+        LOG_ERRNO("failed to read icon update throttle timer");
+        return false;
+    }
+
+    struct itimerspec reset = {{0}};
+    timerfd_settime(term->render.icon.timer_fd, 0, &reset, NULL);
+
+    render_refresh_icon(term);
+    return true;
+}
+
+static bool
 fdm_app_id_update_timeout(struct fdm *fdm, int fd, int events, void *data)
 {
     if (events & EPOLLHUP)
@@ -1114,6 +1138,7 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
     int delay_upper_fd = -1;
     int app_sync_updates_fd = -1;
     int title_update_fd = -1;
+    int icon_update_fd = -1;
     int app_id_update_fd = -1;
 
     struct terminal *term = malloc(sizeof(*term));
@@ -1147,6 +1172,12 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
     if ((title_update_fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)) < 0)
     {
         LOG_ERRNO("failed to create title update throttle timer FD");
+        goto close_fds;
+    }
+
+    if ((icon_update_fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK)) < 0)
+    {
+        LOG_ERRNO("failed to create icon update throttle timer FD");
         goto close_fds;
     }
 
@@ -1187,6 +1218,7 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
         !fdm_add(fdm, delay_upper_fd, EPOLLIN, &fdm_delayed_render, term) ||
         !fdm_add(fdm, app_sync_updates_fd, EPOLLIN, &fdm_app_sync_updates_timeout, term) ||
         !fdm_add(fdm, title_update_fd, EPOLLIN, &fdm_title_update_timeout, term) ||
+        !fdm_add(fdm, icon_update_fd, EPOLLIN, &fdm_icon_update_timeout, term) ||
         !fdm_add(fdm, app_id_update_fd, EPOLLIN, &fdm_app_id_update_timeout, term))
     {
         goto err;
@@ -1287,6 +1319,9 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
             .app_sync_updates.timer_fd = app_sync_updates_fd,
             .title = {
                 .timer_fd = title_update_fd,
+            },
+            .icon = {
+                .timer_fd = icon_update_fd,
             },
             .app_id = {
                 .timer_fd = app_id_update_fd,
@@ -1406,6 +1441,7 @@ close_fds:
     fdm_del(fdm, delay_upper_fd);
     fdm_del(fdm, app_sync_updates_fd);
     fdm_del(fdm, title_update_fd);
+    fdm_del(fdm, icon_update_fd);
     fdm_del(fdm, app_id_update_fd);
 
     free(term);
@@ -1626,6 +1662,7 @@ term_shutdown(struct terminal *term)
     fdm_del(term->fdm, term->selection.auto_scroll.fd);
     fdm_del(term->fdm, term->render.app_sync_updates.timer_fd);
     fdm_del(term->fdm, term->render.app_id.timer_fd);
+    fdm_del(term->fdm, term->render.icon.timer_fd);
     fdm_del(term->fdm, term->render.title.timer_fd);
     fdm_del(term->fdm, term->delayed_render_timer.lower_fd);
     fdm_del(term->fdm, term->delayed_render_timer.upper_fd);
@@ -1677,6 +1714,7 @@ term_shutdown(struct terminal *term)
     term->selection.auto_scroll.fd = -1;
     term->render.app_sync_updates.timer_fd = -1;
     term->render.app_id.timer_fd = -1;
+    term->render.icon.timer_fd = -1;
     term->render.title.timer_fd = -1;
     term->delayed_render_timer.lower_fd = -1;
     term->delayed_render_timer.upper_fd = -1;
@@ -1731,6 +1769,7 @@ term_destroy(struct terminal *term)
     fdm_del(term->fdm, term->selection.auto_scroll.fd);
     fdm_del(term->fdm, term->render.app_sync_updates.timer_fd);
     fdm_del(term->fdm, term->render.app_id.timer_fd);
+    fdm_del(term->fdm, term->render.icon.timer_fd);
     fdm_del(term->fdm, term->render.title.timer_fd);
     fdm_del(term->fdm, term->delayed_render_timer.lower_fd);
     fdm_del(term->fdm, term->delayed_render_timer.upper_fd);
@@ -1775,7 +1814,9 @@ term_destroy(struct terminal *term)
     composed_free(term->composed);
 
     free(term->app_id);
+    free(term->window_icon);
     free(term->window_title);
+    tll_free_and_free(term->window_icon_stack, free);
     tll_free_and_free(term->window_title_stack, free);
 
     for (size_t i = 0; i < sizeof(term->fonts) / sizeof(term->fonts[0]); i++)
@@ -2007,6 +2048,9 @@ term_reset(struct terminal *term, bool hard)
     term->saved_charsets = term->charsets;
     tll_free_and_free(term->window_title_stack, free);
     term_set_window_title(term, term->conf->title);
+    tll_free_and_free(term->window_icon_stack, free);
+    term_set_app_id(term, NULL);
+    term_set_icon(term, NULL);
 
     term_set_user_mouse_cursor(term, NULL);
 
@@ -3528,7 +3572,7 @@ term_set_window_title(struct terminal *term, const char *title)
     if (term->window_title != NULL && streq(term->window_title, title))
         return;
 
-    if (mbsntoc32(NULL, title, strlen(title), 0) == (size_t)-1) {
+    if (!is_valid_utf8(title)) {
         /* It's an xdg_toplevel::set_title() protocol violation to set
            a title with an invalid UTF-8 sequence */
         LOG_WARN("%s: title is not valid UTF-8, ignoring", title);
@@ -3548,8 +3592,13 @@ term_set_app_id(struct terminal *term, const char *app_id)
         app_id = NULL;
     if (term->app_id == NULL && app_id == NULL)
         return;
-    if (term->app_id != NULL && app_id != NULL && strcmp(term->app_id, app_id) == 0)
+    if (term->app_id != NULL && app_id != NULL && streq(term->app_id, app_id))
         return;
+
+    if (app_id != NULL && !is_valid_utf8(app_id)) {
+        LOG_WARN("%s: app-id is not valid UTF-8, ignoring", app_id);
+        return;
+    }
 
     free(term->app_id);
     if (app_id != NULL) {
@@ -3558,6 +3607,44 @@ term_set_app_id(struct terminal *term, const char *app_id)
         term->app_id = NULL;
     }
     render_refresh_app_id(term);
+    render_refresh_icon(term);
+}
+
+void
+term_set_icon(struct terminal *term, const char *icon)
+{
+    if (icon != NULL && *icon == '\0')
+        icon = NULL;
+    if (term->window_icon == NULL && icon == NULL)
+        return;
+    if (term->window_icon != NULL && icon != NULL && streq(term->window_icon, icon))
+        return;
+
+    if (icon != NULL && !is_valid_utf8(icon)) {
+        LOG_WARN("%s: icon label is not valid UTF-8, ignoring", icon);
+        return;
+    }
+
+    free(term->window_icon);
+    if (icon != NULL) {
+        term->window_icon = xstrdup(icon);
+    } else {
+        term->window_icon = NULL;
+    }
+    render_refresh_icon(term);
+}
+
+const char *
+term_icon(const struct terminal *term)
+{
+    const char *app_id =
+        term->app_id != NULL ? term->app_id : term->conf->app_id;
+
+    return term->window_icon != NULL
+        ? term->window_icon
+        : streq(app_id, "footclient")
+            ? "foot"
+            : app_id;
 }
 
 void

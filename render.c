@@ -12,15 +12,19 @@
 
 #include "macros.h"
 #if HAS_INCLUDE(<pthread_np.h>)
-#include <pthread_np.h>
-#define pthread_setname_np(thread, name) (pthread_set_name_np(thread, name), 0)
+ #include <pthread_np.h>
+ #define pthread_setname_np(thread, name) (pthread_set_name_np(thread, name), 0)
 #elif defined(__NetBSD__)
-#define pthread_setname_np(thread, name) pthread_setname_np(thread, "%s", (void *)name)
+ #define pthread_setname_np(thread, name) pthread_setname_np(thread, "%s", (void *)name)
 #endif
 
+#include <presentation-time.h>
 #include <wayland-cursor.h>
 #include <xdg-shell.h>
-#include <presentation-time.h>
+
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+#include <xdg-toplevel-icon-v1.h>
+#endif
 
 #include <fcft/fcft.h>
 
@@ -4951,24 +4955,47 @@ render_refresh_app_id(struct terminal *term)
         term->app_id != NULL ? term->app_id : term->conf->app_id;
 
     xdg_toplevel_set_app_id(term->window->xdg_toplevel, app_id);
-
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
-    if (term->wl->toplevel_icon_manager != NULL) {
-        struct xdg_toplevel_icon_v1 *icon =
-            xdg_toplevel_icon_manager_v1_create_icon(
-                term->wl->toplevel_icon_manager);
-
-        xdg_toplevel_icon_v1_set_name(
-            icon, streq(app_id, "footclient") ? "foot" : app_id);
-
-        xdg_toplevel_icon_manager_v1_set_icon(
-            term->wl->toplevel_icon_manager, term->window->xdg_toplevel, icon);
-
-        xdg_toplevel_icon_v1_destroy(icon);
-    }
-#endif
-
     term->render.app_id.last_update = now;
+}
+
+void
+render_refresh_icon(struct terminal *term)
+{
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    if (term->wl->toplevel_icon_manager == NULL) {
+        LOG_DBG("compositor does not implement xdg-toplevel-icon: "
+                "ignoring request to refresh window icon");
+        return;
+    }
+
+    struct timespec now;
+    if (clock_gettime(CLOCK_MONOTONIC, &now) < 0)
+        return;
+
+    struct timespec diff;
+    timespec_sub(&now, &term->render.icon.last_update, &diff);
+
+    if (diff.tv_sec == 0 && diff.tv_nsec < 8333 * 1000) {
+        const struct itimerspec timeout = {
+            .it_value = {.tv_nsec = 8333 * 1000 - diff.tv_nsec},
+        };
+
+        timerfd_settime(term->render.icon.timer_fd, 0, &timeout, NULL);
+        return;
+    }
+
+    const char *icon_name = term_icon(term);
+    LOG_DBG("setting toplevel icon: %s", icon_name);
+
+    struct xdg_toplevel_icon_v1 *icon =
+        xdg_toplevel_icon_manager_v1_create_icon(term->wl->toplevel_icon_manager);
+    xdg_toplevel_icon_v1_set_name(icon, icon_name);
+    xdg_toplevel_icon_manager_v1_set_icon(
+        term->wl->toplevel_icon_manager, term->window->xdg_toplevel, icon);
+    xdg_toplevel_icon_v1_destroy(icon);
+
+    term->render.icon.last_update = now;
+#endif
 }
 
 void
