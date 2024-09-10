@@ -70,6 +70,7 @@ void render_refresh(struct terminal *term) {}
 void render_refresh_csd(struct terminal *term) {}
 void render_refresh_title(struct terminal *term) {}
 void render_refresh_app_id(struct terminal *term) {}
+void render_refresh_icon(struct terminal *term) {}
 
 bool
 render_xcursor_is_valid(const struct seat *seat, const char *cursor)
