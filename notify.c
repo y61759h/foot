@@ -268,7 +268,7 @@ notif_done(struct reaper *reaper, pid_t pid, int status, void *data)
             }
 
             char reply[7 + strlen(id) + 1 + strlen(button_nr) + 2 + 1];
-            int n = xsnprintf(
+            size_t n = xsnprintf(
                 reply, sizeof(reply), "\033]99;i=%s;%s\033\\", id, button_nr);
             term_to_slave(term, reply, n);
         }
@@ -278,7 +278,7 @@ notif_done(struct reaper *reaper, pid_t pid, int status, void *data)
 
             const char *id = notif->id != NULL ? notif->id : "0";
             char reply[7 + strlen(id) + 1 + 7 + 1 + 2 + 1];
-            int n = xsnprintf(
+            size_t n = xsnprintf(
                 reply, sizeof(reply), "\033]99;i=%s:p=close;\033\\", id);
             term_to_slave(term, reply, n);
         }

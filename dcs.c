@@ -271,7 +271,7 @@ decrqss_unhook(struct terminal *term)
     if (n == 1 && query[0] == 'r') {
         /* DECSTBM - Set Top and Bottom Margins */
         char reply[64];
-        int len = xsnprintf(reply, sizeof(reply), "\033P1$r%d;%dr\033\\",
+        size_t len = xsnprintf(reply, sizeof(reply), "\033P1$r%d;%dr\033\\",
                             term->scroll_region.start + 1,
                             term->scroll_region.end);
         term_to_slave(term, reply, len);
@@ -300,7 +300,7 @@ decrqss_unhook(struct terminal *term)
         if (a->underline) {
             if (term->vt.underline.style > UNDERLINE_SINGLE) {
                 char value[4];
-                int val_len =
+                size_t val_len =
                     xsnprintf(value, sizeof(value), "4:%d", term->vt.underline.style);
                 append_sgr_attr_n(&reply, &len, value, val_len);
             } else
@@ -321,7 +321,7 @@ decrqss_unhook(struct terminal *term)
 
         case COLOR_BASE16: {
             char value[4];
-            int val_len = xsnprintf(
+            size_t val_len = xsnprintf(
                 value, sizeof(value), "%u",
                 a->fg >= 8 ? a->fg - 8 + 90 : a->fg + 30);
             append_sgr_attr_n(&reply, &len, value, val_len);
@@ -330,7 +330,7 @@ decrqss_unhook(struct terminal *term)
 
         case COLOR_BASE256: {
             char value[16];
-            int val_len = xsnprintf(value, sizeof(value), "38:5:%u", a->fg);
+            size_t val_len = xsnprintf(value, sizeof(value), "38:5:%u", a->fg);
             append_sgr_attr_n(&reply, &len, value, val_len);
             break;
         }
@@ -341,7 +341,7 @@ decrqss_unhook(struct terminal *term)
             uint8_t b = a->fg >> 0;
 
             char value[32];
-            int val_len = xsnprintf(
+            size_t val_len = xsnprintf(
                 value, sizeof(value), "38:2::%hhu:%hhu:%hhu", r, g, b);
             append_sgr_attr_n(&reply, &len, value, val_len);
             break;
@@ -354,7 +354,7 @@ decrqss_unhook(struct terminal *term)
 
         case COLOR_BASE16: {
             char value[4];
-            int val_len = xsnprintf(
+            size_t val_len = xsnprintf(
                 value, sizeof(value), "%u",
                 a->bg >= 8 ? a->bg - 8 + 100 : a->bg + 40);
             append_sgr_attr_n(&reply, &len, value, val_len);
@@ -363,7 +363,7 @@ decrqss_unhook(struct terminal *term)
 
         case COLOR_BASE256: {
             char value[16];
-            int val_len = xsnprintf(value, sizeof(value), "48:5:%u", a->bg);
+            size_t val_len = xsnprintf(value, sizeof(value), "48:5:%u", a->bg);
             append_sgr_attr_n(&reply, &len, value, val_len);
             break;
         }
@@ -374,7 +374,7 @@ decrqss_unhook(struct terminal *term)
             uint8_t b = a->bg >> 0;
 
             char value[32];
-            int val_len = xsnprintf(
+            size_t val_len = xsnprintf(
                 value, sizeof(value), "48:2::%hhu:%hhu:%hhu", r, g, b);
             append_sgr_attr_n(&reply, &len, value, val_len);
             break;
@@ -388,7 +388,7 @@ decrqss_unhook(struct terminal *term)
 
         case COLOR_BASE256: {
             char value[16];
-            int val_len = xsnprintf(
+            size_t val_len = xsnprintf(
                 value, sizeof(value), "58:5:%u", term->vt.underline.color);
             append_sgr_attr_n(&reply, &len, value, val_len);
             break;
@@ -400,7 +400,7 @@ decrqss_unhook(struct terminal *term)
             uint8_t b = term->vt.underline.color >> 0;
 
             char value[32];
-            int val_len = xsnprintf(
+            size_t val_len = xsnprintf(
                 value, sizeof(value), "58:2::%hhu:%hhu:%hhu", r, g, b);
             append_sgr_attr_n(&reply, &len, value, val_len);
             break;
@@ -432,7 +432,7 @@ decrqss_unhook(struct terminal *term)
             mode--;
 
         char reply[16];
-        int len = xsnprintf(reply, sizeof(reply), "\033P1$r%d q\033\\", mode);
+        size_t len = xsnprintf(reply, sizeof(reply), "\033P1$r%d q\033\\", mode);
         term_to_slave(term, reply, len);
     }
 

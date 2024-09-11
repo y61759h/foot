@@ -4302,7 +4302,7 @@ term_send_size_notification(struct terminal *term)
     const int width = term->width - term->margins.left - term->margins.right;
 
     char buf[128];
-    const int n = xsnprintf(
+    const size_t n = xsnprintf(
         buf, sizeof(buf), "\033[48;%d;%d;%d;%dt",
         term->rows, term->cols, height, width);
     term_to_slave(term, buf, n);

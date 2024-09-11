@@ -739,7 +739,7 @@ kitty_notification(struct terminal *term, char *string)
                 const char *terminator = term->vt.osc.bel ? "\a" : "\033\\";
 
                 char reply[128];
-                int n = xsnprintf(
+                size_t n = xsnprintf(
                     reply, sizeof(reply),
                     "\033]99;i=%s:p=?;p=%s:a=%s:o=%s:u=%s:c=1:w=1:s=system,silent,error,warn,warning,info,question%s",
                     reply_id, p_caps, a_caps, when_caps, u_caps, terminator);

@@ -216,6 +216,7 @@ common = static_library(
   'log.c', 'log.h',
   'char32.c', 'char32.h',
   'debug.c', 'debug.h',
+  'macros.h',
   'xmalloc.c', 'xmalloc.h',
   'xsnprintf.c', 'xsnprintf.h'
 )

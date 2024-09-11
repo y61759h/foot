@@ -2127,7 +2127,7 @@ csi_dispatch(struct terminal *term, uint8_t final)
 
         case 'R': {  /* XTREPORTCOLORS */
             char reply[64];
-            int n = xsnprintf(reply, sizeof(reply), "\033[?%zu;%zu#Q",
+            size_t n = xsnprintf(reply, sizeof(reply), "\033[?%zu;%zu#Q",
                               term->color_stack.idx, term->color_stack.size);
             term_to_slave(term, reply, n);
             break;
