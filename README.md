@@ -552,7 +552,7 @@ with the terminal emulator itself. Foot implements the following OSCs:
 * `OSC 777` - desktop notification (only the `;notify` sub-command of
   OSC 777 is supported.)
 
-See the **foot-ctlseq**(7) man page for a complete list of supported
+See the **foot-ctlseqs**(7) man page for a complete list of supported
 control sequences.
 
 
