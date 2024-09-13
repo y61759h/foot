@@ -1592,27 +1592,33 @@ wayl_init(struct fdm *fdm, struct key_binding_manager *key_binding_manager,
         goto out;
     }
 
+    if (presentation_timings && wayl->presentation == NULL) {
+        LOG_ERR("compositor does not implement the presentation time interface");
+        goto out;
+    }
+
     if (wayl->primary_selection_device_manager == NULL)
-        LOG_WARN("no primary selection available");
+        LOG_WARN("compositor does not implement the primary selection interface");
 
     if (wayl->xdg_activation == NULL) {
         LOG_WARN(
-            "no XDG activation support; "
+            "compositor does not implement XDG activation, "
             "bell.urgent will fall back to coloring the window margins red");
     }
 
     if (wayl->fractional_scale_manager == NULL || wayl->viewporter == NULL)
-        LOG_WARN("fractional scaling not available");
+        LOG_WARN("compositor does not implement fractional scaling");
 
     if (wayl->cursor_shape_manager == NULL) {
-        LOG_WARN("no server-side cursors available, "
+        LOG_WARN("compositor does not implement server-side cursors, "
                  "falling back to client-side cursors");
     }
 
-    if (presentation_timings && wayl->presentation == NULL) {
-        LOG_ERR("presentation time interface not implemented by compositor");
-        goto out;
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    if (wayl->toplevel_icon_manager == NULL) {
+        LOG_WARN("compositor does not implement the XDG toplevel icon protocol");
     }
+#endif
 
 #if defined(FOOT_IME_ENABLED) && FOOT_IME_ENABLED
     if (wayl->text_input_manager == NULL) {
