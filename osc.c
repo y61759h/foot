@@ -1145,9 +1145,16 @@ osc_dispatch(struct terminal *term)
     char *string = (char *)&term->vt.osc.data[data_ofs];
 
     switch (param) {
-    case 0: term_set_window_title(term, string); break;  /* icon + title */
-    case 1: break;                                       /* icon */
-    case 2: term_set_window_title(term, string); break;  /* title */
+    case 0:  /* icon + title */
+        term_set_window_title(term, string);
+        break;
+
+    case 1:  /* icon */
+        break;
+
+    case 2:  /* title */
+        term_set_window_title(term, string);
+        break;
 
     case 4: {
         /* Set color<idx> */

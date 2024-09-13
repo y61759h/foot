@@ -1250,7 +1250,6 @@ csi_dispatch(struct terminal *term, uint8_t final)
             case 9: LOG_WARN("unimplemented: maximize/unmaximize window"); break;
             case 10: LOG_WARN("unimplemented: to/from full screen"); break;
             case 20: LOG_WARN("unimplemented: report icon label"); break;
-            case 21: LOG_WARN("unimplemented: report window title"); break;
             case 24: LOG_WARN("unimplemented: resize window (DECSLPP)"); break;
 
             case 11:   /* report if window is iconified */
@@ -1351,6 +1350,14 @@ csi_dispatch(struct terminal *term, uint8_t final)
 
                 if (tll_length(term->window->on_outputs) == 0)
                     term_to_slave(term, "\033[9;0;0t", 8);
+                break;
+            }
+
+            case 21: {
+                char reply[3 + strlen(term->window_title) + 2 + 1];
+                int chars = xsnprintf(
+                    reply, sizeof(reply), "\033]l%s\033\\", term->window_title);
+                term_to_slave(term, reply, chars);
                 break;
             }
 

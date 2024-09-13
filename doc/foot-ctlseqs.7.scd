@@ -388,15 +388,27 @@ manipulation sequences. The generic format is:
 |  19
 :  -
 :  Report screen size, in characters.
+|  20
+:  -
+:  Report icon label.
+|  21
+:  -
+:  Report window title.
 |  22
 :  -
-:  Push window title+icon. Foot does not support pushing the icon.
+:  Push window title+icon.
+|  22
+:  1
+:  Push window icon.
 |  22
 :  2
 :  Push window title.
 |  23
 :  -
-:  Pop window title+icon. Foot does not support popping the icon.
+:  Pop window title+icon.
+|  23
+:  1
+:  Pop window icon.
 |  23
 :  2
 :  Pop window title.
@@ -659,8 +671,10 @@ All _OSC_ sequences begin with *\\E]*, sometimes abbreviated _OSC_.
 :< *Description*
 |  \\E] 0 ; _Pt_ \\E\\ 
 :  xterm
-:  Set window icon and title to _Pt_ (foot does not support setting the
-   icon)
+:  Set window icon and title to _Pt_.
+|  \\E] 1 ; _Pt_ \\E\\ 
+:  xterm
+:  Set window icon to _Pt_.
 |  \\E] 2 ; _Pt_ \\E\\ 
 :  xterm
 :  Set window title to _Pt_

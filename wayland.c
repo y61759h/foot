@@ -1363,6 +1363,17 @@ handle_global(void *data, struct wl_registry *registry,
             &wp_single_pixel_buffer_manager_v1_interface, required);
     }
 
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    else if (streq(interface, xdg_toplevel_icon_v1_interface.name)) {
+        const uint32_t required = 1;
+        if (!verify_iface_version(interface, version, required))
+            return;
+
+        wayl->toplevel_icon_manager = wl_registry_bind(
+            wayl->registry, name, &xdg_toplevel_icon_v1_interface, required);
+    }
+#endif
+
 #if defined(FOOT_IME_ENABLED) && FOOT_IME_ENABLED
     else if (streq(interface, zwp_text_input_manager_v3_interface.name)) {
         const uint32_t required = 1;
@@ -1581,27 +1592,33 @@ wayl_init(struct fdm *fdm, struct key_binding_manager *key_binding_manager,
         goto out;
     }
 
+    if (presentation_timings && wayl->presentation == NULL) {
+        LOG_ERR("compositor does not implement the presentation time interface");
+        goto out;
+    }
+
     if (wayl->primary_selection_device_manager == NULL)
-        LOG_WARN("no primary selection available");
+        LOG_WARN("compositor does not implement the primary selection interface");
 
     if (wayl->xdg_activation == NULL) {
         LOG_WARN(
-            "no XDG activation support; "
+            "compositor does not implement XDG activation, "
             "bell.urgent will fall back to coloring the window margins red");
     }
 
     if (wayl->fractional_scale_manager == NULL || wayl->viewporter == NULL)
-        LOG_WARN("fractional scaling not available");
+        LOG_WARN("compositor does not implement fractional scaling");
 
     if (wayl->cursor_shape_manager == NULL) {
-        LOG_WARN("no server-side cursors available, "
+        LOG_WARN("compositor does not implement server-side cursors, "
                  "falling back to client-side cursors");
     }
 
-    if (presentation_timings && wayl->presentation == NULL) {
-        LOG_ERR("presentation time interface not implemented by compositor");
-        goto out;
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    if (wayl->toplevel_icon_manager == NULL) {
+        LOG_WARN("compositor does not implement the XDG toplevel icon protocol");
     }
+#endif
 
 #if defined(FOOT_IME_ENABLED) && FOOT_IME_ENABLED
     if (wayl->text_input_manager == NULL) {
@@ -1679,6 +1696,10 @@ wayl_destroy(struct wayland *wayl)
         zwp_text_input_manager_v3_destroy(wayl->text_input_manager);
 #endif
 
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    if (wayl->toplevel_icon_manager != NULL)
+        xdg_toplevel_icon_manager_v1_destroy(wayl->toplevel_icon_manager);
+#endif
     if (wayl->single_pixel_manager != NULL)
         wp_single_pixel_buffer_manager_v1_destroy(wayl->single_pixel_manager);
     if (wayl->fractional_scale_manager != NULL)
@@ -1795,6 +1816,21 @@ wayl_win_init(struct terminal *term, const char *token)
     xdg_toplevel_add_listener(win->xdg_toplevel, &xdg_toplevel_listener, win);
 
     xdg_toplevel_set_app_id(win->xdg_toplevel, conf->app_id);
+
+#if defined(HAVE_XDG_TOPLEVEL_ICON)
+    if (wayl->toplevel_icon_manager != NULL) {
+        const char *app_id =
+            term->app_id != NULL ? term->app_id : term->conf->app_id;
+
+        struct xdg_toplevel_icon_v1 *icon =
+            xdg_toplevel_icon_manager_v1_create_icon(wayl->toplevel_icon_manager);
+        xdg_toplevel_icon_v1_set_name(icon, streq(
+            app_id, "footclient") ? "foot" : app_id);
+        xdg_toplevel_icon_manager_v1_set_icon(
+            wayl->toplevel_icon_manager, win->xdg_toplevel, icon);
+        xdg_toplevel_icon_v1_destroy(icon);
+    }
+#endif
 
     if (conf->csd.preferred == CONF_CSD_PREFER_NONE) {
         /* User specifically do *not* want decorations */

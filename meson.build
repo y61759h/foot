@@ -171,6 +171,14 @@ wl_proto_xml = [
   wayland_protocols_datadir / 'staging/single-pixel-buffer/single-pixel-buffer-v1.xml',
   ]
 
+if wayland_protocols.version().version_compare('>=1.37')
+  add_project_arguments('-DHAVE_XDG_TOPLEVEL_ICON', language: 'c')
+  wl_proto_xml += [wayland_protocols_datadir / 'staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml']
+  xdg_toplevel_icon = true
+else
+  xdg_toplevel_icon = false
+endif
+
 foreach prot : wl_proto_xml
   wl_proto_headers += custom_target(
     prot.underscorify() + '-client-header',
@@ -401,6 +409,7 @@ summary(
     'Themes': get_option('themes'),
     'IME': get_option('ime'),
     'Grapheme clustering': utf8proc.found(),
+    'Wayland: xdg-toplevel-icon-v1': xdg_toplevel_icon,
     'utmp backend': utmp_backend,
     'utmp helper default path': utmp_default_helper_path,
     'Build terminfo': tic.found(),
