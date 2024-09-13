@@ -1377,10 +1377,6 @@ csi_dispatch(struct terminal *term, uint8_t final)
                     tll_push_back(
                         term->window_title_stack, xstrdup(term->window_title));
                 }
-                if (what == 0 || what == 1) {
-                    tll_push_back(
-                        term->window_icon_stack, xstrdup(term->window_icon));
-                }
                 break;
             }
 
@@ -1392,13 +1388,6 @@ csi_dispatch(struct terminal *term, uint8_t final)
                         char *title = tll_pop_back(term->window_title_stack);
                         term_set_window_title(term, title);
                         free(title);
-                    }
-                }
-                if (what == 0 || what == 1) {
-                    if (tll_length(term->window_icon_stack) > 0) {
-                        char *icon = tll_pop_back(term->window_icon_stack);
-                        term_set_icon(term, icon);
-                        free(icon);
                     }
                 }
                 break;

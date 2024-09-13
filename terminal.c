@@ -1814,9 +1814,7 @@ term_destroy(struct terminal *term)
     composed_free(term->composed);
 
     free(term->app_id);
-    free(term->window_icon);
     free(term->window_title);
-    tll_free_and_free(term->window_icon_stack, free);
     tll_free_and_free(term->window_title_stack, free);
 
     for (size_t i = 0; i < sizeof(term->fonts) / sizeof(term->fonts[0]); i++)
@@ -2048,9 +2046,7 @@ term_reset(struct terminal *term, bool hard)
     term->saved_charsets = term->charsets;
     tll_free_and_free(term->window_title_stack, free);
     term_set_window_title(term, term->conf->title);
-    tll_free_and_free(term->window_icon_stack, free);
     term_set_app_id(term, NULL);
-    term_set_icon(term, NULL);
 
     term_set_user_mouse_cursor(term, NULL);
 
@@ -3610,39 +3606,19 @@ term_set_app_id(struct terminal *term, const char *app_id)
     render_refresh_icon(term);
 }
 
-void
-term_set_icon(struct terminal *term, const char *icon)
-{
-    if (icon != NULL && *icon == '\0')
-        icon = NULL;
-    if (term->window_icon == NULL && icon == NULL)
-        return;
-    if (term->window_icon != NULL && icon != NULL && streq(term->window_icon, icon))
-        return;
-
-    if (icon != NULL && !is_valid_utf8(icon)) {
-        LOG_WARN("%s: icon label is not valid UTF-8, ignoring", icon);
-        return;
-    }
-
-    free(term->window_icon);
-    if (icon != NULL) {
-        term->window_icon = xstrdup(icon);
-    } else {
-        term->window_icon = NULL;
-    }
-    render_refresh_icon(term);
-}
-
 const char *
 term_icon(const struct terminal *term)
 {
     const char *app_id =
         term->app_id != NULL ? term->app_id : term->conf->app_id;
 
-    return term->window_icon != NULL
+    return
+#if 0
+term->window_icon != NULL
         ? term->window_icon
-        : streq(app_id, "footclient")
+        :
+        #endif
+        streq(app_id, "footclient")
             ? "foot"
             : app_id;
 }

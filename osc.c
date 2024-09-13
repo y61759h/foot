@@ -1147,11 +1147,9 @@ osc_dispatch(struct terminal *term)
     switch (param) {
     case 0:  /* icon + title */
         term_set_window_title(term, string);
-        term_set_icon(term, string);
         break;
 
     case 1:  /* icon */
-        term_set_icon(term, string);
         break;
 
     case 2:  /* title */
