@@ -1,8 +1,9 @@
 #include "render.h"
 
+#include <limits.h>
+#include <signal.h>
 #include <string.h>
 #include <unistd.h>
-#include <signal.h>
 
 #include <sys/ioctl.h>
 #include <sys/time.h>
