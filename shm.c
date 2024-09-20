@@ -577,8 +577,8 @@ shm_get_buffer(struct buffer_chain *chain, int width, int height, bool with_alph
             buf->public.age++;
         else
 #if FORCED_DOUBLE_BUFFERING
-            if (buf->age == 0)
-                buf->age++;
+            if (buf->public.age == 0)
+                buf->public.age++;
             else
 #endif
             {
