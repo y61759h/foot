@@ -3046,6 +3046,11 @@ reapply_old_damage(struct terminal *term, struct buffer *new, struct buffer *old
     for (int r = 0; r < term->rows; r++) {
         const struct row *row = grid_row_in_view(term->grid, r);
 
+        if (!row->dirty) {
+            full_repaint_needed = false;
+            continue;
+        }
+
         bool row_all_dirty = true;
         for (int c = 0; c < term->cols; c++) {
             if (row->cells[c].attrs.clean) {
