@@ -3315,6 +3315,30 @@ grid_render(struct terminal *term)
 
     render_sixel_images(term, buf->pix[0], &damage, &cursor);
 
+
+#if defined(_DEBUG)
+    for (int r = 0; r < term->rows; r++) {
+        const struct row *row = grid_row_in_view(term->grid, r);
+
+        if (row->dirty) {
+            bool all_clean = true;
+            for (int c = 0; c < term->cols; c++) {
+                if (!row->cells[c].attrs.clean) {
+                    all_clean = false;
+                    break;
+                }
+            }
+            if (all_clean)
+                BUG("row #%d is dirty, but all cells are marked as clean", r);
+        } else {
+            for (int c = 0; c < term->cols; c++) {
+                if (!row->cells[c].attrs.clean)
+                    BUG("row #%d is clean, but cell #%d is dirty", r, c);
+            }
+        }
+    }
+#endif
+
     if (term->render.workers.count > 0) {
         mtx_lock(&term->render.workers.lock);
         term->render.workers.buf = buf;
