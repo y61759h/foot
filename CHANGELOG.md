@@ -100,8 +100,12 @@
   ([#1828][1828]).
 * Crash when trying to set an invalid cursor shape with OSC-22, when
   foot uses server-side cursor shapes.
+* Occasional visual glitches when selecting text, when foot is running
+  under a compositor that forces foot to double buffer
+  (e.g. KDE/KWin) ([#1715][1715]).
 
 [1828]: https://codeberg.org/dnkl/foot/issues/1828
+[1715]: https://codeberg.org/dnkl/foot/issues/1715
 
 
 ### Security
