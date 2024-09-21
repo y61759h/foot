@@ -98,6 +98,8 @@
 * "Too large" values for `scrollback.lines` causing an integer
   overflow, resulting in either visual glitches, crashes, or both
   ([#1828][1828]).
+* Crash when trying to set an invalid cursor shape with OSC-22, when
+  foot uses server-side cursor shapes.
 
 [1828]: https://codeberg.org/dnkl/foot/issues/1828
 
