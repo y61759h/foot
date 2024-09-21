@@ -3315,12 +3315,6 @@ grid_render(struct terminal *term)
         }
     }
 
-    pixman_region32_t damage;
-    pixman_region32_init(&damage);
-
-    render_sixel_images(term, buf->pix[0], &damage, &cursor);
-
-
 #if defined(_DEBUG)
     for (int r = 0; r < term->rows; r++) {
         const struct row *row = grid_row_in_view(term->grid, r);
@@ -3343,6 +3337,12 @@ grid_render(struct terminal *term)
         }
     }
 #endif
+
+    pixman_region32_t damage;
+    pixman_region32_init(&damage);
+
+    render_sixel_images(term, buf->pix[0], &damage, &cursor);
+
 
     if (term->render.workers.count > 0) {
         mtx_lock(&term->render.workers.lock);
