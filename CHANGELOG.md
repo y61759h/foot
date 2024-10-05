@@ -103,9 +103,13 @@
 * Occasional visual glitches when selecting text, when foot is running
   under a compositor that forces foot to double buffer
   (e.g. KDE/KWin) ([#1715][1715]).
+* Sixels flickering when foot is running under a compositor that
+  forces foot to double buffer (e.g. KDE, or Smithay based
+  compositors) ([#1851][1851]).
 
 [1828]: https://codeberg.org/dnkl/foot/issues/1828
 [1715]: https://codeberg.org/dnkl/foot/issues/1715
+[1851]: https://codeberg.org/dnkl/foot/issues/1851
 
 
 ### Security

@@ -1390,7 +1390,8 @@ grid_render_scroll_reverse(struct terminal *term, struct buffer *buf,
 }
 
 static void
-render_sixel_chunk(struct terminal *term, pixman_image_t *pix, const struct sixel *sixel,
+render_sixel_chunk(struct terminal *term, pixman_image_t *pix,
+                   pixman_region32_t *damage, const struct sixel *sixel,
                    int term_start_row, int img_start_row, int count)
 {
     /* Translate row/column to x/y pixel values */
@@ -1427,6 +1428,9 @@ render_sixel_chunk(struct terminal *term, pixman_image_t *pix, const struct sixe
         x, y,
         width, height);
 
+    if (damage != NULL)
+        pixman_region32_union_rect(damage, damage, x, y, width, height);
+
     wl_surface_damage_buffer(term->window->surface.surf, x, y, width, height);
 }
 
@@ -1450,7 +1454,7 @@ render_sixel(struct terminal *term, pixman_image_t *pix,
 #define maybe_emit_sixel_chunk_then_reset()                             \
     if (chunk_row_count != 0) {                                         \
         render_sixel_chunk(                                             \
-            term, pix, sixel,                                           \
+            term, pix, damage, sixel,                                   \
             chunk_term_start, chunk_img_start, chunk_row_count);        \
         chunk_term_start = chunk_img_start = -1;                        \
         chunk_row_count = 0;                                            \
