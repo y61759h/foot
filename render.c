@@ -1430,8 +1430,6 @@ render_sixel_chunk(struct terminal *term, pixman_image_t *pix,
 
     if (damage != NULL)
         pixman_region32_union_rect(damage, damage, x, y, width, height);
-
-    wl_surface_damage_buffer(term->window->surface.surf, x, y, width, height);
 }
 
 static void
