@@ -1,6 +1,6 @@
 # Changelog
 
-* [Unreleased](#unreleased)
+* [1.19.0](#1-19-0)
 * [1.18.1](#1-18-1)
 * [1.18.0](#1-18-0)
 * [1.17.2](#1-17-2)
@@ -54,7 +54,8 @@
 * [1.2.0](#1-2-0)
 
 
-## Unreleased
+## 1.19.0
+
 ### Added
 
 * `resize-keep-grid` option, controlling whether the window is resized
@@ -94,8 +95,6 @@
 [1840]: https://codeberg.org/dnkl/foot/issues/1840
 
 
-### Deprecated
-### Removed
 ### Fixed
 
 * Some invalid UTF-8 strings passing the validity check when setting
@@ -118,8 +117,12 @@
 [1851]: https://codeberg.org/dnkl/foot/issues/1851
 
 
-### Security
 ### Contributors
+
+* Andrew J. Hesford
+* Craig Barnes
+* Oleh Hushchenkov
+* tokyo4j
 
 
 ## 1.18.1
