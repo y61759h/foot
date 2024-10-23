@@ -85,9 +85,13 @@
 * The `.desktop` files no longer use the reverse DNS naming scheme,
   and their names now match the default app-ids used by foot (`foot`
   and `footclient`) ([#1607][1607]).
+* `file://` prefix are now stripped from OSC-8 URIs when
+  activated/opened, **if** the hostname matches the hostname of the
+  computer foot is running on ([#1840][1840]).
 
 [1822]: https://codeberg.org/dnkl/foot/issues/1822
 [1607]: https://codeberg.org/dnkl/foot/issues/1607
+[1840]: https://codeberg.org/dnkl/foot/issues/1840
 
 
 ### Deprecated

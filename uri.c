@@ -144,6 +144,21 @@ uri_parse(const char *uri, size_t len,
     const char *query_start = memchr(start, '?', left);
     const char *fragment_start = memchr(start, '#', left);
 
+    if (streq(*scheme, "file")) {
+        /* Don't try to parse query/fragment in file URIs, just treat
+           the remaining text as path */
+        query_start = NULL;
+        fragment_start = NULL;
+    }
+
+    else if (query_start != NULL && fragment_start != NULL &&
+        fragment_start < query_start)
+    {
+        /* Invalid URI - for now, ignore, and treat is as part of path */
+        query_start = NULL;
+        fragment_start = NULL;
+    }
+
     size_t path_len =
         query_start != NULL ? query_start - start :
         fragment_start != NULL ? fragment_start - start :
