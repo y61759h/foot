@@ -228,6 +228,7 @@ struct config {
         uint32_t url;
 
         uint32_t dim[8];
+        uint32_t sixel[16];
 
         struct {
             uint32_t fg;

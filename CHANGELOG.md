@@ -63,6 +63,8 @@
 * `strikeout-thickness` option.
 * Implemented the new `xdg-toplevel-icon-v1` protocol.
 * Implemented `CSI 21 t`: report window title.
+* `colors.sixelNN` option, controlling the default sixel color
+  palette.
 
 [1807]: https://codeberg.org/dnkl/foot/issues/1807
 

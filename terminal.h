@@ -770,7 +770,6 @@ struct terminal {
         unsigned repeat_count;
 
         bool transparent_bg;
-        uint32_t default_bg;
 
         /* Application configurable */
         unsigned palette_size;  /* Number of colors in palette */

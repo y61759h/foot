@@ -86,6 +86,26 @@ static const uint32_t default_color_table[256] = {
     0xd0d0d0, 0xdadada, 0xe4e4e4, 0xeeeeee
 };
 
+/* VT330/VT340 Programmer Reference Manual  - Table 2-3 VT340 Default Color Map */
+static const uint32_t default_sixel_colors[16] = {
+    0xff000000,
+    0xff3333cc,
+    0xffcc2121,
+    0xff33cc33,
+    0xffcc33cc,
+    0xff33cccc,
+    0xffcccc33,
+    0xff878787,
+    0xff424242,
+    0xff545499,
+    0xff994242,
+    0xff549954,
+    0xff995499,
+    0xff549999,
+    0xff999954,
+    0xffcccccc,
+};
+
 static const char *const binding_action_map[] = {
     [BIND_ACTION_NONE] = NULL,
     [BIND_ACTION_NOOP] = "noop",
@@ -1307,6 +1327,14 @@ parse_section_colors(struct context *ctx)
 
         conf->colors.use_custom.dim |= 1 << last_digit;
         return true;
+    }
+
+    else if (str_has_prefix(key, "sixel") &&
+             ((key_len == 6 && last_digit < 10) ||
+              (key_len == 7 && key[5] == '1' && last_digit < 6)))
+    {
+        size_t idx = key_len == 6 ? last_digit : 10 + last_digit;
+        return value_to_color(ctx, &conf->colors.sixel[idx], false);
     }
 
     else if (streq(key, "flash")) color = &conf->colors.flash;
@@ -3247,6 +3275,7 @@ config_load(struct config *conf, const char *conf_path,
     };
 
     memcpy(conf->colors.table, default_color_table, sizeof(default_color_table));
+    memcpy(conf->colors.sixel, default_sixel_colors, sizeof(default_sixel_colors));
     parse_modifiers(XKB_MOD_NAME_SHIFT, 5, &conf->mouse.selection_override_modifiers);
 
     tokenize_cmdline(

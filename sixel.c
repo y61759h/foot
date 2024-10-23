@@ -19,29 +19,6 @@ static size_t count;
 static void sixel_put_generic(struct terminal *term, uint8_t c);
 static void sixel_put_ar_11(struct terminal *term, uint8_t c);
 
-/* VT330/VT340 Programmer Reference Manual  - Table 2-3 VT340 Default Color Map */
-static const uint32_t vt340_default_colors[16] = {
-    0xff000000,
-    0xff3333cc,
-    0xffcc2121,
-    0xff33cc33,
-    0xffcc33cc,
-    0xff33cccc,
-    0xffcccc33,
-    0xff878787,
-    0xff424242,
-    0xff545499,
-    0xff994242,
-    0xff549954,
-    0xff995499,
-    0xff549999,
-    0xff999954,
-    0xffcccccc,
-};
-
-_Static_assert(sizeof(vt340_default_colors) / sizeof(vt340_default_colors[0]) == 16,
-               "wrong number of elements");
-
 void
 sixel_fini(struct terminal *term)
 {
@@ -105,8 +82,8 @@ sixel_init(struct terminal *term, int p1, int p2, int p3)
             term->sixel.palette_size, sizeof(term->sixel.private_palette[0]));
 
         memcpy(
-            term->sixel.private_palette, vt340_default_colors,
-            min(sizeof(vt340_default_colors),
+            term->sixel.private_palette, term->conf->colors.sixel,
+            min(sizeof(term->conf->colors.sixel),
                 term->sixel.palette_size * sizeof(term->sixel.private_palette[0])));
 
         term->sixel.palette = term->sixel.private_palette;
@@ -117,8 +94,8 @@ sixel_init(struct terminal *term, int p1, int p2, int p3)
                 term->sixel.palette_size, sizeof(term->sixel.shared_palette[0]));
 
             memcpy(
-                term->sixel.shared_palette, vt340_default_colors,
-                min(sizeof(vt340_default_colors),
+                term->sixel.shared_palette, term->conf->colors.sixel,
+                min(sizeof(term->conf->colors.sixel),
                     term->sixel.palette_size * sizeof(term->sixel.shared_palette[0])));
         } else {
             /* Shared palette - do *not* reset palette for new sixels */
@@ -126,12 +103,6 @@ sixel_init(struct terminal *term, int p1, int p2, int p3)
 
         term->sixel.palette = term->sixel.shared_palette;
     }
-
-    if (term->sixel.transparent_bg)
-        term->sixel.default_bg = 0x00000000u;
-    else
-        term->sixel.default_bg = term->sixel.palette[0];
-
 
     count = 0;
     return pan == 1 && pad == 1 ? &sixel_put_ar_11 : &sixel_put_generic;
@@ -1419,7 +1390,7 @@ resize_horizontally(struct terminal *term, int new_width_mutable)
     /* Width (and thus stride) change - need to allocate a new buffer */
     uint32_t *new_data = xmalloc(new_width * alloc_height * sizeof(uint32_t));
 
-    uint32_t bg = term->sixel.default_bg;
+    uint32_t bg = term->sixel.transparent_bg ? 0 : term->sixel.palette[0];
 
     /* Copy old rows, and initialize new columns to background color */
     const uint32_t *end = &new_data[alloc_height * new_width];
@@ -1476,7 +1447,7 @@ resize_vertically(struct terminal *term, const int new_height)
         return false;
     }
 
-    const uint32_t bg = term->sixel.default_bg;
+    const uint32_t bg = term->sixel.transparent_bg ? 0 : term->sixel.palette[0];
 
     memset_u32(&new_data[old_height * width],
                bg,
@@ -1529,7 +1500,7 @@ resize(struct terminal *term, int new_width_mutable, int new_height_mutable)
     xassert(alloc_new_height - new_height < sixel_row_height);
 
     uint32_t *new_data = NULL;
-    const uint32_t bg = term->sixel.default_bg;
+    const uint32_t bg = term->sixel.transparent_bg ? 0 : term->sixel.palette[0];
 
     /*
      * If the image is resized horizontally, or if it's opaque, we
