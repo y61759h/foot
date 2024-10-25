@@ -1305,7 +1305,7 @@ scrollback search mode. The syntax is exactly the same as the regular
 
 *clipboard-paste*
 	Paste from the _clipboard_ into the search buffer. Default:
-	_Control+v Control+y_.
+	_Control+v Control+y Control+Shift+v XF86Paste_.
 
 *primary-paste*
 	Paste from the _primary selection_ into the search

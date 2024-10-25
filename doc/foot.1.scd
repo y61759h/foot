@@ -224,6 +224,8 @@ default) available; see *foot.ini*(5).
 
 ## SCROLLBACK SEARCH
 
+These keyboard shortcuts affect the search selection:
+
 *ctrl*+*r*
 	Search _backward_ for the next match. If the search string is
 	empty, the last searched-for string is used.
@@ -232,7 +234,13 @@ default) available; see *foot.ini*(5).
 	Search _forward_ for the next match. If the search string is
 	empty, the last searched-for string is used.
 
-*ctrl*+*w*
+*shift*+*right*
+	Extend current selection to the right by one character.
+
+*shift*+*left*
+	Extend current selection to the left by one character.
+
+*ctrl*+*w*, *ctrl*+*shift*+*right*
 	Extend current selection (and thus the search criteria) to the end
 	of the word, or the next word if currently at a word separating
 	character.
@@ -240,6 +248,18 @@ default) available; see *foot.ini*(5).
 *ctrl*+*shift*+*w*
 	Same as *ctrl*+*w*, except that the only word separating
 	characters are whitespace characters.
+
+*ctrl*+*shift*+*left*
+	Extend current selection to the left to the last word boundary.
+
+*ctrl*+*shift*+*w*
+	Extend the current selection to the right to the last whitespace.
+
+*shift*+*down*
+	Extend current selection down one line
+
+*shift*+*up*
+	Extend current selection up one line.
 
 *ctrl*+*v*, *ctrl*+*shift*+*v*, *ctrl*+*y*, *XF86Paste*
 	Paste from clipboard into the search buffer.
@@ -254,6 +274,40 @@ default) available; see *foot.ini*(5).
 	Finish the search and copy the current match to the primary
 	selection. The terminal selection is kept, allowing you to press
 	*ctrl*+*shift*+*c* to copy it to the clipboard.
+
+These shortcuts affect the search box in scrollback-search mode:
+
+*ctrl*+*b*
+	Moves the cursor in the search box one **character** to the left.
+
+*ctrl*+*left*, *alt*+*b*
+	Moves the cursor in the search box one **word** to the left. 
+
+*ctrl*+*f*
+	Moves the cursor in the search box one **character** to the right.
+
+*ctrl*+*right*, *alt*+*f*
+	Moves the cursor in the search box one **word** to the right.
+
+*Home*, *ctrl*+*a*
+	Moves the cursor in the search box to the beginning of the input.
+
+*End*, *ctrl*+*e*
+	Moves the cursor in the search box to the end of the input. 
+
+*alt*+*backspace*, *ctrl*+*backspace*
+	Deletes the **word before** the cursor. 
+
+*alt*+*delete*, *ctrl*+*delete*
+	Deletes the **word after** the cursor.
+
+These shortcuts affect scrolling in scrollback-search mode:
+
+*shift*+*page-up*
+	Scrolls up/back one page in history.
+
+*shift*+*page-down*
+	Scroll down/forward one page in history.
 
 ## URL MODE
 
