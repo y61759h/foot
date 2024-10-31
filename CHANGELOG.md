@@ -61,6 +61,13 @@
 ### Deprecated
 ### Removed
 ### Fixed
+
+* Crash when receiving an OSC-9 or OSC-777 with an empty notification
+  body ([#1866][1866]).
+
+[1866]: https://codeberg.org/dnkl/foot/issues/1866
+
+
 ### Security
 ### Contributors
 
