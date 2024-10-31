@@ -57,6 +57,12 @@
 
 ## Unreleased
 ### Added
+
+* Unicode data files updated to Unicode 16. Foot uses these to
+  determine which VS-15 and VS-16 sequences are valid, and which are
+  not.
+
+
 ### Changed
 ### Deprecated
 ### Removed
