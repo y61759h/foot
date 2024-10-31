@@ -8,6 +8,10 @@
 #include <wchar.h>
 #include <wctype.h>
 
+#if defined(FOOT_GRAPHEME_CLUSTERING)
+ #include <utf8proc.h>
+#endif
+
 static inline size_t c32len(const char32_t *s) {
     return wcslen((const wchar_t *)s);
 }
@@ -69,11 +73,22 @@ static inline bool isc32graph(char32_t c32) {
 }
 
 static inline int c32width(char32_t c) {
+#if defined(FOOT_GRAPHEME_CLUSTERING)
+    return utf8proc_charwidth((utf8proc_int32_t)c);
+#else
     return wcwidth((wchar_t)c);
+#endif
 }
 
 static inline int c32swidth(const char32_t *s, size_t n) {
+#if defined(FOOT_GRAPHEME_CLUSTERING)
+    int width = 0;
+    for (size_t i = 0; i < n; i++)
+        width += utf8proc_charwidth((utf8proc_int32_t)s[i]);
+    return width;
+#else
     return wcswidth((const wchar_t *)s, n);
+#endif
 }
 
 size_t mbsntoc32(char32_t *dst, const char *src, size_t nms, size_t len);

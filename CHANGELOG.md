@@ -68,6 +68,11 @@
 * OSC-9: sequences beginning with `<number>;` are now ignored. These
   sequences are ConEmu/Windows Terminal sequences, and not intended to
   be notifications.
+* Use `utf8proc_charwidth()` instead of `wcwidth()`+`wcswidth()` when
+  calculating character width, when foot has been built with utf8proc
+  support ([#1865][1865]).
+
+[1865]: https://codeberg.org/dnkl/foot/issues/1865
 
 
 ### Deprecated
