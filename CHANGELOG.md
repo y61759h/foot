@@ -64,6 +64,12 @@
 
 
 ### Changed
+
+* OSC-9: sequences beginning with `<number>;` are now ignored. These
+  sequences are ConEmu/Windows Terminal sequences, and not intended to
+  be notifications.
+
+
 ### Deprecated
 ### Removed
 ### Fixed

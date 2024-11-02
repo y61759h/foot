@@ -1231,10 +1231,22 @@ osc_dispatch(struct terminal *term)
         osc_uri(term, string);
         break;
 
-    case 9:
+    case 9: {
         /* iTerm2 Growl notifications */
+        const char *sep = strchr(string, ';');
+        if (sep != NULL) {
+            errno = 0;
+            char *end = NULL;
+            strtoul(string, &end, 10);
+            if (end == sep && errno == 0) {
+                /* Ignore ConEmu/Windows Terminal escape */
+                break;
+            }
+        }
+
         osc_notify(term, string);
         break;
+    }
 
     case 10:    /* fg */
     case 11:    /* bg */
