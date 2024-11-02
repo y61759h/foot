@@ -763,9 +763,11 @@ action_utf8_print(struct terminal *term, char32_t wc)
                 bool comb_from_primary;
                 bool pre_from_primary;
 
-                char32_t precomposed = fcft_precompose(
-                    term->fonts[0], base, wc, &base_from_primary,
-                    &comb_from_primary, &pre_from_primary);
+                char32_t precomposed = term->fonts[0] != NULL
+                    ? fcft_precompose(
+                        term->fonts[0], base, wc, &base_from_primary,
+                        &comb_from_primary, &pre_from_primary)
+                    : (char32_t)-1;
 
                 int precomposed_width = c32width(precomposed);
 
