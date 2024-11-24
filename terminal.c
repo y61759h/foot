@@ -884,8 +884,6 @@ get_font_dpi(const struct terminal *term)
      * scaling factor (no downscaling done by the compositor).
      */
 
-    xassert(tll_length(term->wl->monitors) > 0);
-
     const struct wl_window *win = term->window;
     const struct monitor *mon = NULL;
 
