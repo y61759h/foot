@@ -33,9 +33,12 @@ struct buf {
 
     int thickness[2];
 
-    /* For sextants and wedges */
+    /* For octants, sextants and wedges */
     int x_halfs[2];
     int y_thirds[2];
+
+    /* For octants */
+    int y_quads[3];
 };
 
 static const pixman_color_t white = {0xffff, 0xffff, 0xffff, 0xffff};
@@ -2213,6 +2216,7 @@ draw_sextant(struct buf *buf, char32_t wc)
         LOWER_RIGHT = 1 << 5,
     };
 
+    /* TODO: move this to a separate file? */
     static const uint8_t matrix[60] = {
         /* U+1fb00 - U+1fb0f */
         UPPER_LEFT,
@@ -2306,6 +2310,398 @@ draw_sextant(struct buf *buf, char32_t wc)
 
     if (encoded & LOWER_RIGHT)
         sextant_lower_right(buf);
+}
+
+static void
+octant_upper_left(struct buf *buf)
+{
+    rect(0, 0, buf->x_halfs[0], buf->y_quads[0]);
+}
+
+static void
+octant_middle_up_left(struct buf *buf)
+{
+    rect(0, buf->y_quads[0], buf->x_halfs[0], buf->y_quads[1]);
+}
+
+static void
+octant_middle_down_left(struct buf *buf)
+{
+    rect(0, buf->y_quads[1], buf->x_halfs[0], buf->y_quads[2]);
+}
+
+static void
+octant_lower_left(struct buf *buf)
+{
+    rect(0, buf->y_quads[2], buf->x_halfs[0], buf->height);
+}
+
+static void
+octant_upper_right(struct buf *buf)
+{
+    rect(buf->x_halfs[1], 0, buf->width, buf->y_quads[0]);
+}
+
+static void
+octant_middle_up_right(struct buf *buf)
+{
+    rect(buf->x_halfs[1], buf->y_quads[0], buf->width, buf->y_quads[1]);
+}
+
+static void
+octant_middle_down_right(struct buf *buf)
+{
+    rect(buf->x_halfs[1], buf->y_quads[1], buf->width, buf->y_quads[2]);
+}
+
+static void
+octant_lower_right(struct buf *buf)
+{
+    rect(buf->x_halfs[1], buf->y_quads[2], buf->width, buf->height);
+}
+
+static void NOINLINE
+draw_octant(struct buf *buf, char32_t wc)
+{
+    /*
+     * Each byte encodes one octant:
+     *
+     * Bit      octant part
+     *   0      upper left
+     *   1      middle, upper left
+     *   2      middle, lower left
+     *   3      lower, left
+     *   4      upper right
+     *   5      middle, upper right
+     *   6      middle, lower right
+     *   7      lower right
+     */
+    enum {
+        UPPER_LEFT = 1 << 0,
+        MIDDLE_UP_LEFT = 1 << 1,
+        MIDDLE_DOWN_LEFT = 1 << 2,
+        LOWER_LEFT = 1 << 3,
+        UPPER_RIGHT = 1 << 4,
+        MIDDLE_UP_RIGHT = 1 << 5,
+        MIDDLE_DOWN_RIGHT = 1 << 6,
+        LOWER_RIGHT = 1 << 7,
+    };
+
+    /* TODO: move this to a separate file */
+    static const uint8_t matrix[230] = {
+        /* U+1CD00 - U+1CD0F */
+        MIDDLE_UP_LEFT,
+        MIDDLE_UP_LEFT | UPPER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | UPPER_RIGHT,
+        MIDDLE_UP_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT,
+        MIDDLE_DOWN_LEFT,
+        UPPER_LEFT | MIDDLE_DOWN_LEFT,
+        UPPER_RIGHT | MIDDLE_DOWN_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_LEFT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT,
+
+        /* U+1CD10 - U+1CD1F */
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT,
+        MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_RIGHT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT,
+
+        /* U+1CD20 - U+1CD2F */
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT,
+        MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+
+        /* U+1CD30 - U+1CD3F */
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT,
+        UPPER_LEFT | LOWER_LEFT,
+        UPPER_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | LOWER_LEFT,
+        MIDDLE_UP_LEFT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | LOWER_LEFT,
+        MIDDLE_UP_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | LOWER_LEFT,
+
+        /* U+1CD40 - U+1CD4F */
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | LOWER_LEFT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+
+        /* U+1CD50 - U+1CD5F */
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT,
+        MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+
+        /* U+1CD60 - U+1CD6F */
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+
+        /* U+1CD70 - U+1CD7F */
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT,
+        UPPER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_RIGHT,
+
+        /* U+1CD80 - U+1CD8F */
+        MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_RIGHT,
+
+        /* U+1CD90 - U+1CD9F */
+        UPPER_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+
+        /* U+1CDA0 - U+1CDAF */
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_RIGHT,
+        UPPER_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | LOWER_LEFT | LOWER_RIGHT,
+
+        /* U+1CDB0 - U+1CDBF */
+        UPPER_LEFT | MIDDLE_UP_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+
+        /* U+1CDC0 - U+1CDCF */
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+
+        /* U+1CDD0 - U+1CDDF */
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+
+        /* U+1CDE0 - U+1CDE5 */
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | UPPER_RIGHT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_LEFT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+        UPPER_RIGHT | MIDDLE_UP_LEFT | MIDDLE_UP_RIGHT | MIDDLE_DOWN_LEFT | MIDDLE_DOWN_RIGHT | LOWER_LEFT | LOWER_RIGHT,
+    };
+
+    _Static_assert(ALEN(matrix) == 230, "incorrect number of codepoints");
+
+#if defined(_DEBUG)
+    const size_t last_implemented = 0x1cde5;
+    for (size_t i = 0; i < sizeof(matrix) / sizeof(matrix[0]); i++) {
+        if (i + 0x1cd00 > last_implemented)
+            break;
+
+        for (size_t j = 0; j < sizeof(matrix) / sizeof(matrix[0]); j++) {
+            if (j + 0x1cd00 > last_implemented)
+                break;
+
+            if (i == j)
+                continue;
+
+            if (matrix[i] == matrix[j]) {
+                BUG("octant U+%05x (idx=%zu) is the same as U+%05x (idx=%zu)",
+                    matrix[i], i, matrix[j], j);
+            }
+        }
+    }
+#endif
+
+    xassert(wc >= 0x1cd00 && wc <= 0x1cde5);
+    const size_t idx = wc - 0x1cd00;
+
+    xassert(idx < ALEN(matrix));
+    uint8_t encoded = matrix[idx];
+
+    if (encoded & UPPER_LEFT)
+        octant_upper_left(buf);
+
+    if (encoded & MIDDLE_UP_LEFT)
+        octant_middle_up_left(buf);
+
+    if (encoded & MIDDLE_DOWN_LEFT)
+        octant_middle_down_left(buf);
+
+    if (encoded & LOWER_LEFT)
+        octant_lower_left(buf);
+
+    if (encoded & UPPER_RIGHT)
+        octant_upper_right(buf);
+
+    if (encoded & MIDDLE_UP_RIGHT)
+        octant_middle_up_right(buf);
+
+    if (encoded & MIDDLE_DOWN_RIGHT)
+        octant_middle_down_right(buf);
+
+    if (encoded & LOWER_RIGHT)
+        octant_lower_right(buf);
 }
 
 static void NOINLINE
@@ -2856,6 +3252,7 @@ draw_glyph(struct buf *buf, char32_t wc)
 
     case 0x2800 ... 0x28ff: draw_braille(buf, wc); break;
 
+    case 0x1cd00 ... 0x1cde5: draw_octant(buf, wc); break;
     case 0x1fb00 ... 0x1fb3b: draw_sextant(buf, wc); break;
 
     case 0x1fb3c ... 0x1fb40:
@@ -2957,23 +3354,50 @@ box_drawing(const struct terminal *term, char32_t wc)
         (double)term->conf->tweak.box_drawing_base_thickness * scale * cell_size * dpi / 72.0;
     base_thickness = max(base_thickness, 1);
 
-    int y0 = 0, y1 = 0;
+    int y_third_0 = 0, y_third_1 = 0;
     switch (height % 3) {
     case 0:
-        y0 = height / 3;
-        y1 = 2 * height / 3;
+        y_third_0 = height / 3;
+        y_third_1 = 2 * height / 3;
         break;
 
     case 1:
-        y0 = height / 3;
-        y1 = 2 * height / 3 + 1;
+        y_third_0 = height / 3;
+        y_third_1 = 2 * height / 3 + 1;
         break;
 
     case 2:
-        y0 = height / 3 + 1;
-        y1 = y0 + height / 3;
+        y_third_0 = height / 3 + 1;
+        y_third_1 = y_third_0 + height / 3;
         break;
     }
+
+    /* TODO */
+    int y_quad_0 = 0, y_quad_1 = 0, y_quad_2 = 0;
+    switch (height % 4) {
+    case 0:
+        y_quad_0 = height / 4;
+        y_quad_1 = height / 2;
+        y_quad_2 = 3 * height / 4;
+        break;
+
+    case 1:
+        y_quad_0 = height / 4;
+        y_quad_1 = height / 2;
+        y_quad_2 = 3 * height / 4;
+        break;
+    case 2:
+        y_quad_0 = height / 4;
+        y_quad_1 = height / 2;
+        y_quad_2 = 3 * height / 4;
+        break;
+
+    case 3:
+        y_quad_0 = height / 4;
+        y_quad_1 = height / 2;
+        y_quad_2 = 3 * height / 4;
+        break;
+        }
 
     struct buf buf = {
         .data = data,
@@ -2996,8 +3420,14 @@ box_drawing(const struct terminal *term, char32_t wc)
         },
 
         .y_thirds = {
-            y0,  /* Endpoint first third, start point second third */
-            y1,  /* Endpoint second third, start point last third */
+            y_third_0,  /* Endpoint first third, start point second third */
+            y_third_1,  /* Endpoint second third, start point last third */
+        },
+
+        .y_quads = {
+            y_quad_0,
+            y_quad_1,
+            y_quad_2,
         },
     };
 

@@ -61,6 +61,9 @@
 * Unicode data files updated to Unicode 16. Foot uses these to
   determine which VS-15 and VS-16 sequences are valid, and which are
   not.
+* Box drawing characters U+1CD00...U+1CDE5 (the _"octants"_ from the
+  _"Symbols for Legacy Computing Supplement"_ codepoint range, added
+  in Unicode 16.0).
 
 
 ### Changed

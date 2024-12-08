@@ -483,6 +483,7 @@ struct terminal {
         struct fcft_glyph **box_drawing;
         struct fcft_glyph **braille;
         struct fcft_glyph **legacy;
+        struct fcft_glyph **octants;
 
         #define GLYPH_BOX_DRAWING_FIRST 0x2500
         #define GLYPH_BOX_DRAWING_LAST  0x259F
@@ -498,6 +499,11 @@ struct terminal {
         #define GLYPH_LEGACY_LAST  0x1FB9B
         #define GLYPH_LEGACY_COUNT \
             (GLYPH_LEGACY_LAST - GLYPH_LEGACY_FIRST + 1)
+
+        #define GLYPH_OCTANTS_FIRST 0x1CD00
+        #define GLYPH_OCTANTS_LAST  0x1CDE5
+        #define GLYPH_OCTANTS_COUNT \
+            (GLYPH_OCTANTS_LAST - GLYPH_OCTANTS_FIRST + 1)
     } custom_glyphs;
 
     bool is_sending_paste_data;

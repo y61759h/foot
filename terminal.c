@@ -808,6 +808,8 @@ term_set_fonts(struct terminal *term, struct fcft_font *fonts[static 4],
         &term->custom_glyphs.braille, GLYPH_BRAILLE_COUNT);
     free_custom_glyphs(
         &term->custom_glyphs.legacy, GLYPH_LEGACY_COUNT);
+    free_custom_glyphs(
+        &term->custom_glyphs.octants, GLYPH_OCTANTS_COUNT);
 
     const struct config *conf = term->conf;
 
@@ -1827,6 +1829,8 @@ term_destroy(struct terminal *term)
         &term->custom_glyphs.braille, GLYPH_BRAILLE_COUNT);
     free_custom_glyphs(
         &term->custom_glyphs.legacy, GLYPH_LEGACY_COUNT);
+    free_custom_glyphs(
+        &term->custom_glyphs.octants, GLYPH_OCTANTS_COUNT);
 
     free(term->search.buf);
     free(term->search.last.buf);
