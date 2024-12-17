@@ -74,6 +74,8 @@
 * Use `utf8proc_charwidth()` instead of `wcwidth()`+`wcswidth()` when
   calculating character width, when foot has been built with utf8proc
   support ([#1865][1865]).
+* Run-time changes to the window title, and the app ID now require the
+  new value to consist of printable characters only.
 
 [1865]: https://codeberg.org/dnkl/foot/issues/1865
 

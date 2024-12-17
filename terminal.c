@@ -3570,7 +3570,7 @@ term_set_window_title(struct terminal *term, const char *title)
     if (term->window_title != NULL && streq(term->window_title, title))
         return;
 
-    if (!is_valid_utf8(title)) {
+    if (!is_valid_utf8_and_printable(title)) {
         /* It's an xdg_toplevel::set_title() protocol violation to set
            a title with an invalid UTF-8 sequence */
         LOG_WARN("%s: title is not valid UTF-8, ignoring", title);
@@ -3593,7 +3593,7 @@ term_set_app_id(struct terminal *term, const char *app_id)
     if (term->app_id != NULL && app_id != NULL && streq(term->app_id, app_id))
         return;
 
-    if (app_id != NULL && !is_valid_utf8(app_id)) {
+    if (app_id != NULL && !is_valid_utf8_and_printable(app_id)) {
         LOG_WARN("%s: app-id is not valid UTF-8, ignoring", app_id);
         return;
     }

@@ -44,8 +44,19 @@ timespec_sub(const struct timespec *a, const struct timespec *b,
 }
 
 bool
-is_valid_utf8(const char *value)
+is_valid_utf8_and_printable(const char *value)
 {
-    return value != NULL &&
-           mbsntoc32(NULL, value, strlen(value), 0) != (size_t)-1;
+    char32_t *wide = ambstoc32(value);
+    if (wide == NULL)
+        return false;
+
+    for (const char32_t *c = wide; *c != U'\0'; c++) {
+        if (!isc32print(*c)) {
+            free(wide);
+            return false;
+        }
+    }
+
+    free(wide);
+    return true;
 }
