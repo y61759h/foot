@@ -1,5 +1,6 @@
 #include "misc.h"
 #include "char32.h"
+#include <stdlib.h>
 
 bool
 isword(char32_t wc, bool spaces_only, const char32_t *delimiters)
