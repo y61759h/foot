@@ -416,6 +416,33 @@ The format is simply:
 Note: do not set *TERM* here; use the *term* option in the main
 (default) section instead.
 
+# SECTION: security
+
+*osc52*
+
+	Whether OSC-52 (clipboard access) is enabled or disabled. One of
+	*disabled*, *copy-enabled*, *paste-enabled* or *enabled*.
+	
+	OSC-52 gives terminal application access to the host clipboard
+	(i.e. the Wayland clipboard). This is normally not a security
+	issue, since all applications can access the clipboard directly
+	over the Wayland socket.
+	
+	However, when SSH:ing into a remote system, or accessing a
+	container etc, the terminal applications may be untrusted, and you
+	might consider disabling the host clipboard access.
+	
+	- *disabled*: disables all clipboard access
+	- *copy-enabled*: applications can write to the clipboard, but not
+	  read from it.
+	- *paste-enabled*: applications can read from the clipboard, but
+	  not write to it.
+	- *enabled*: all applications have full access to the host
+	  clipboard. This is the default.
+	
+	Default: _enabled_
+
+
 # SECTION: bell
 
 *urgent*

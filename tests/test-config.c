@@ -554,6 +554,22 @@ test_section_main(void)
 }
 
 static void
+test_section_security(void)
+{
+    struct config conf = {0};
+    struct context ctx = {.conf = &conf, .section = "security", .path = "unittest"};
+
+    test_invalid_key(&ctx, &parse_section_security, "invalid-key");
+    test_enum(
+        &ctx, &parse_section_security, "osc52", 4,
+        (const char*[]){"disabled", "copy-enabled", "paste-enabled", "enabled"},
+        (int []){OSC52_DISABLED, OSC52_COPY_ENABLED, OSC52_PASTE_ENABLED, OSC52_ENABLED},
+        (int *)&conf.security.osc52);
+
+    config_free(&conf);
+}
+
+static void
 test_section_bell(void)
 {
     struct config conf = {0};
@@ -1407,6 +1423,7 @@ main(int argc, const char *const *argv)
     FcInit();
     log_init(LOG_COLORIZE_AUTO, false, 0, LOG_CLASS_ERROR);
     test_section_main();
+    test_section_security();
     test_section_bell();
     test_section_desktop_notifications();
     test_section_scrollback();

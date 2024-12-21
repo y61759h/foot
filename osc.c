@@ -8,7 +8,7 @@
 #include <sys/epoll.h>
 
 #define LOG_MODULE "osc"
-#define LOG_ENABLE_DBG 0
+#define LOG_ENABLE_DBG 1
 #include "log.h"
 #include "base64.h"
 #include "config.h"
@@ -61,6 +61,14 @@ osc_to_clipboard(struct terminal *term, const char *target,
 
     if (seat == NULL) {
         LOG_WARN("OSC52: client tried to write to clipboard data while window was unfocused");
+        return;
+    }
+
+    const bool copy_allowed = term->conf->security.osc52 == OSC52_ENABLED
+                              || term->conf->security.osc52 == OSC52_COPY_ENABLED;
+
+    if (!copy_allowed) {
+        LOG_DBG("ignoring copy request: disabled in configuration");
         return;
     }
 
@@ -187,6 +195,13 @@ osc_from_clipboard(struct terminal *term, const char *source)
 
     if (seat == NULL) {
         LOG_WARN("OSC52: client tried to read clipboard data while window was unfocused");
+        return;
+    }
+
+    const bool paste_allowed = term->conf->security.osc52 == OSC52_ENABLED
+                               || term->conf->security.osc52 == OSC52_PASTE_ENABLED;
+    if (!paste_allowed) {
+        LOG_DBG("ignoring paste request: disabled in configuration");
         return;
     }
 

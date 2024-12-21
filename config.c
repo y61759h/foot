@@ -1111,6 +1111,25 @@ parse_section_main(struct context *ctx)
 }
 
 static bool
+parse_section_security(struct context *ctx)
+{
+    struct config *conf = ctx->conf;
+    const char *key = ctx->key;
+
+    if (streq(key, "osc52")) {
+        _Static_assert(sizeof(conf->security.osc52) == sizeof(int),
+                       "enum is not 32-bit");
+        return value_to_enum(
+            ctx,
+            (const char *[]){"disabled", "copy-enabled", "paste-enabled", "enabled", NULL},
+            (int *)&conf->security.osc52);
+    } else {
+        LOG_CONTEXTUAL_ERR("not a valid option: %s", key);
+        return false;
+    }
+}
+
+static bool
 parse_section_bell(struct context *ctx)
 {
     struct config *conf = ctx->conf;
@@ -2742,6 +2761,7 @@ parse_key_value(char *kv, const char **section, const char **key, const char **v
 
 enum section {
     SECTION_MAIN,
+    SECTION_SECURITY,
     SECTION_BELL,
     SECTION_DESKTOP_NOTIFICATIONS,
     SECTION_SCROLLBACK,
@@ -2769,6 +2789,7 @@ static const struct {
     const char *name;
 } section_info[] = {
     [SECTION_MAIN] =            {&parse_section_main, "main"},
+    [SECTION_SECURITY] =        {&parse_section_security, "security"},
     [SECTION_BELL] =            {&parse_section_bell, "bell"},
     [SECTION_DESKTOP_NOTIFICATIONS] = {&parse_section_desktop_notifications, "desktop-notifications"},
     [SECTION_SCROLLBACK] =      {&parse_section_scrollback, "scrollback"},
@@ -3154,6 +3175,9 @@ config_load(struct config *conf, const char *conf_path,
         .underline_thickness = {.pt = 0., .px = -1},
         .strikeout_thickness = {.pt = 0., .px = -1},
         .dpi_aware = false,
+        .security = {
+            .osc52 = OSC52_ENABLED,
+        },
         .bell = {
             .urgent = false,
             .notify = false,

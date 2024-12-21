@@ -64,6 +64,9 @@
 * Box drawing characters U+1CD00...U+1CDE5 (the _"octants"_ from the
   _"Symbols for Legacy Computing Supplement"_ codepoint range, added
   in Unicode 16.0).
+* `security.osc52` option, allowing you to partially or fully disable
+  host clipboard access via the OSC-52 escape sequence
+  ([#1867][1867]).
 
 
 ### Changed

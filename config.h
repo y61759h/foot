@@ -174,6 +174,15 @@ struct config {
     bool can_shape_grapheme;
 
     struct {
+        enum {
+            OSC52_DISABLED,
+            OSC52_COPY_ENABLED,
+            OSC52_PASTE_ENABLED,
+            OSC52_ENABLED,
+        } osc52;
+    } security;
+
+    struct {
         bool urgent;
         bool notify;
         bool flash;
