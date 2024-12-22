@@ -533,8 +533,8 @@ selection_find_quote_left(struct terminal *term, struct coord *pos,
     const struct row *row = grid_row_in_view(term->grid, pos->row);
     char32_t wc = row->cells[pos->col].wc;
 
-    if ((*quote_char == '\0' && (wc == '"' || wc == '\'')) ||
-        wc == *quote_char)
+    if (*quote_char == '\0' ? (wc == '"' || wc == '\'')
+                            : wc == *quote_char)
     {
         return false;
     }
@@ -555,8 +555,8 @@ selection_find_quote_left(struct terminal *term, struct coord *pos,
 
         wc = row->cells[next_col].wc;
 
-        if ((*quote_char == '\0' && (wc == '"' || wc == '\'')) ||
-            wc == *quote_char)
+        if (*quote_char == '\0' ? (wc == '"' || wc == '\'')
+                                : wc == *quote_char)
         {
             pos->row = next_row;
             pos->col = next_col + 1;
