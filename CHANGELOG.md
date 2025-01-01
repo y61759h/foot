@@ -79,8 +79,12 @@
   support ([#1865][1865]).
 * Run-time changes to the window title, and the app ID now require the
   new value to consist of printable characters only.
+* Kitty keyboard protocol: Enter, Tab and Backspace no longer report
+  _release_ events unless _"Report all keys as escape codes"_ is
+  enabled ([#1892][1892]).
 
 [1865]: https://codeberg.org/dnkl/foot/issues/1865
+[1892]: https://codeberg.org/dnkl/foot/issues/1892
 
 
 ### Deprecated

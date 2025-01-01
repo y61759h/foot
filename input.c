@@ -1236,9 +1236,20 @@ kitty_kbd_protocol(struct seat *seat, struct terminal *term,
 
     if ((mods & ~locked & ~consumed) == 0) {
         switch (sym) {
-        case XKB_KEY_Return:    term_to_slave(term, "\r", 1); return  true;
-        case XKB_KEY_BackSpace: term_to_slave(term, "\x7f", 1); return true;
-        case XKB_KEY_Tab:       term_to_slave(term, "\t", 1); return true;
+        case XKB_KEY_Return:
+            if (!released)
+                term_to_slave(term, "\r", 1);
+            return  true;
+
+        case XKB_KEY_BackSpace:
+            if (!released)
+                term_to_slave(term, "\x7f", 1);
+            return true;
+
+        case XKB_KEY_Tab:
+            if (!released)
+                term_to_slave(term, "\t", 1);
+            return true;
         }
     }
 
