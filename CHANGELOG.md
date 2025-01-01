@@ -1,6 +1,6 @@
 # Changelog
 
-* [Unreleased](#unreleased)
+* [1.20.0](#1-20-0)
 * [1.19.0](#1-19-0)
 * [1.18.1](#1-18-1)
 * [1.18.0](#1-18-0)
@@ -55,7 +55,8 @@
 * [1.2.0](#1-2-0)
 
 
-## Unreleased
+## 1.20.0
+
 ### Added
 
 * Unicode data files updated to Unicode 16. Foot uses these to
@@ -87,8 +88,6 @@
 [1892]: https://codeberg.org/dnkl/foot/issues/1892
 
 
-### Deprecated
-### Removed
 ### Fixed
 
 * Crash when receiving an OSC-9 or OSC-777 with an empty notification
@@ -98,8 +97,13 @@
 [1866]: https://codeberg.org/dnkl/foot/issues/1866
 
 
-### Security
 ### Contributors
+
+* cy
+* Denis Zharikov
+* heather7283
+* Jack Wilsdon
+* Mark Stosberg
 
 
 ## 1.19.0
