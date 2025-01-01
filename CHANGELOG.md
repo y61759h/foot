@@ -80,6 +80,8 @@
   host clipboard access via the OSC-52 escape sequence
   ([#1867][1867]).
 
+[1867]: https://codeberg.org/dnkl/foot/issues/1867
+
 
 ### Changed
 
