@@ -59,6 +59,13 @@
 ## Unreleased
 ### Added
 ### Changed
+
+* Runtime changes to the app-id (OSC-176) now limits the app-id string
+  to 2048 characters ([#1897][1897]).
+
+[1897]: https://codeberg.org/dnkl/foot/issues/1897
+
+
 ### Deprecated
 ### Removed
 ### Fixed

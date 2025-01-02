@@ -3588,8 +3588,10 @@ term_set_app_id(struct terminal *term, const char *app_id)
 {
     if (app_id != NULL && *app_id == '\0')
         app_id = NULL;
+
     if (term->app_id == NULL && app_id == NULL)
         return;
+
     if (term->app_id != NULL && app_id != NULL && streq(term->app_id, app_id))
         return;
 
@@ -3604,6 +3606,19 @@ term_set_app_id(struct terminal *term, const char *app_id)
     } else {
         term->app_id = NULL;
     }
+
+    const size_t length = strlen(app_id);
+    if (length > 2048) {
+        /*
+         * Not sure if there's a limit in the protocol, or the
+         * libwayland implementation, or e.g. wlroots, but too long
+         * app-id's (not e.g. title) causes at least river and sway to
+         * peg the CPU at 100%, and stop sending e.g. frame callbacks.
+         *
+         */
+        term->app_id[2048] = '\0';
+    }
+
     render_refresh_app_id(term);
     render_refresh_icon(term);
 }
