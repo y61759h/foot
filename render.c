@@ -817,14 +817,14 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
             size_t count;
             size_t idx;
 
-            if (base >= GLYPH_OCTANTS_FIRST) {
-                arr = &term->custom_glyphs.octants;
-                count = GLYPH_OCTANTS_COUNT;
-                idx = base - GLYPH_OCTANTS_FIRST;
-            } else if (base >= GLYPH_LEGACY_FIRST) {
+            if (base >= GLYPH_LEGACY_FIRST) {
                 arr = &term->custom_glyphs.legacy;
                 count = GLYPH_LEGACY_COUNT;
                 idx = base - GLYPH_LEGACY_FIRST;
+            } else if (base >= GLYPH_OCTANTS_FIRST) {
+                arr = &term->custom_glyphs.octants;
+                count = GLYPH_OCTANTS_COUNT;
+                idx = base - GLYPH_OCTANTS_FIRST;
             } else if (base >= GLYPH_BRAILLE_FIRST) {
                 arr = &term->custom_glyphs.braille;
                 count = GLYPH_BRAILLE_COUNT;
