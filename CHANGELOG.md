@@ -1,6 +1,6 @@
 # Changelog
 
-* [Unreleased](#unreleased)
+* [1.20.1](#1-20-1)
 * [1.20.0](#1-20-0)
 * [1.19.0](#1-19-0)
 * [1.18.1](#1-18-1)
@@ -56,8 +56,8 @@
 * [1.2.0](#1-2-0)
 
 
-## Unreleased
-### Added
+## 1.20.1
+
 ### Changed
 
 * Runtime changes to the app-id (OSC-176) now limits the app-id string
@@ -69,18 +69,12 @@
 [1897]: https://codeberg.org/dnkl/foot/issues/1897
 
 
-### Deprecated
-### Removed
 ### Fixed
 
 * Regression: trying to print a Unicode _"Legacy Computing symbol"_,
   in the range U+1FB00 - U+1FB9B would crash foot ([#][]).
 
 [1901]: https://codeberg.org/dnkl/foot/issues/1901
-
-
-### Security
-### Contributors
 
 
 ## 1.20.0
