@@ -1,5 +1,6 @@
 # Changelog
 
+* [Unreleased](#unreleased)
 * [1.20.0](#1-20-0)
 * [1.19.0](#1-19-0)
 * [1.18.1](#1-18-1)
@@ -55,6 +56,33 @@
 * [1.2.0](#1-2-0)
 
 
+## Unreleased
+### Added
+### Changed
+
+* Runtime changes to the app-id (OSC-176) now limits the app-id string
+  to 2048 characters ([#1897][1897]).
+* `colors.flash-alpha` can no longer be set to 1.0 (i.e. fully
+  opaque). This fixes an issue where the window would be stuck in the
+  flash state.
+
+[1897]: https://codeberg.org/dnkl/foot/issues/1897
+
+
+### Deprecated
+### Removed
+### Fixed
+
+* Regression: trying to print a Unicode _"Legacy Computing symbol"_,
+  in the range U+1FB00 - U+1FB9B would crash foot ([#][]).
+
+[1901]: https://codeberg.org/dnkl/foot/issues/1901
+
+
+### Security
+### Contributors
+
+
 ## 1.20.0
 
 ### Added
@@ -68,6 +96,8 @@
 * `security.osc52` option, allowing you to partially or fully disable
   host clipboard access via the OSC-52 escape sequence
   ([#1867][1867]).
+
+[1867]: https://codeberg.org/dnkl/foot/issues/1867
 
 
 ### Changed

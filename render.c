@@ -817,14 +817,14 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
             size_t count;
             size_t idx;
 
-            if (base >= GLYPH_OCTANTS_FIRST) {
-                arr = &term->custom_glyphs.octants;
-                count = GLYPH_OCTANTS_COUNT;
-                idx = base - GLYPH_OCTANTS_FIRST;
-            } else if (base >= GLYPH_LEGACY_FIRST) {
+            if (base >= GLYPH_LEGACY_FIRST) {
                 arr = &term->custom_glyphs.legacy;
                 count = GLYPH_LEGACY_COUNT;
                 idx = base - GLYPH_LEGACY_FIRST;
+            } else if (base >= GLYPH_OCTANTS_FIRST) {
+                arr = &term->custom_glyphs.octants;
+                count = GLYPH_OCTANTS_COUNT;
+                idx = base - GLYPH_OCTANTS_FIRST;
             } else if (base >= GLYPH_BRAILLE_FIRST) {
                 arr = &term->custom_glyphs.braille;
                 count = GLYPH_BRAILLE_COUNT;
@@ -1898,6 +1898,27 @@ render_overlay(struct terminal *term)
         break;
 
     case OVERLAY_FLASH:
+        /*
+         * A compositor will not send a frame callback for our main
+         * window if it is fully occluded (for example, by a fully
+         * opaque overlay...). This causes the overlay to stuck.
+         *
+         * For regular buffers, it _should_ be enough to *not* hint
+         * the compositor it's opaque. But at least some compositor
+         * special cases single-pixel buffers, and actually look at
+         * their pixel value.
+         *
+         * Thus, we have two options: implement frame callback
+         * handling for the overlay sub-surface, or ensure we don't
+         * use a fully opaque surface. Since no overlays are fully
+         * opaque by default, and the flash surface is the only one
+         * that can be configured to be opaque (colors.flash-alpha),
+         * and since adding frame callback handling adds a lot of
+         * boilerplate code... let's go with the simpler solution of
+         * not allowing colors.flash-alpha to be 1.0.
+         */
+        xassert(term->conf->colors.flash_alpha != 0xffff);
+
         color = color_hex_to_pixman_with_alpha(
                 term->conf->colors.flash,
                 term->conf->colors.flash_alpha);
