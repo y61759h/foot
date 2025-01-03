@@ -83,7 +83,7 @@
 ### Fixed
 
 * Regression: trying to print a Unicode _"Legacy Computing symbol"_,
-  in the range U+1FB00 - U+1FB9B would crash foot ([#][]).
+  in the range U+1FB00 - U+1FB9B would crash foot ([#1901][1901]).
 
 [1901]: https://codeberg.org/dnkl/foot/issues/1901
 
