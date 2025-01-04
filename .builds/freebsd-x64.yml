@@ -19,7 +19,7 @@ packages:
   - noto-emoji
 
 sources:
-  - https://git.sr.ht/~dnkl/foot
+  - https://codeberg.org/dnkl/foot.git
 
 # triggers:
 #   - action: email
@@ -29,6 +29,7 @@ sources:
 tasks:
   - fcft: |
       cd foot/subprojects
+      git clone https://codeberg.org/dnkl/tllist.git
       git clone https://codeberg.org/dnkl/fcft.git
       cd ../..
   - debug: |
