@@ -84,8 +84,11 @@
 
 * Regression: trying to print a Unicode _"Legacy Computing symbol"_,
   in the range U+1FB00 - U+1FB9B would crash foot ([#1901][1901]).
+* Build failures (`utf8proc.h` not found) on at least FreeBSD, but
+  most likely other BSDs, as well as some Linuxes ([#1903][1903]).
 
 [1901]: https://codeberg.org/dnkl/foot/issues/1901
+[1903]: https://codeberg.org/dnkl/foot/issues/1903
 
 
 ## 1.20.0
