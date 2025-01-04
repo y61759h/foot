@@ -226,7 +226,8 @@ common = static_library(
   'debug.c', 'debug.h',
   'macros.h',
   'xmalloc.c', 'xmalloc.h',
-  'xsnprintf.c', 'xsnprintf.h'
+  'xsnprintf.c', 'xsnprintf.h',
+  dependencies: [utf8proc]
 )
 
 misc = static_library(
@@ -234,7 +235,9 @@ misc = static_library(
   'hsl.c', 'hsl.h',
   'macros.h',
   'misc.c', 'misc.h',
-  'uri.c', 'uri.h'
+  'uri.c', 'uri.h',
+  dependencies: [utf8proc],
+  link_with: [common]
 )
 
 vtlib = static_library(
@@ -268,6 +271,7 @@ pgolib = static_library(
 tokenize = static_library(
   'tokenizelib',
   'tokenize.c',
+  dependencies: [utf8proc],
   link_with: [common],
 )
 
@@ -321,7 +325,7 @@ executable(
   'macros.h',
   'util.h',
   version,
-  dependencies: [tllist],
+  dependencies: [tllist, utf8proc],
   link_with: common,
   install: true)
 
