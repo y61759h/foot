@@ -49,7 +49,7 @@ steps:
       # Debug
       - mkdir -p bld/debug-x64
       - cd bld/debug-x64
-      - meson --buildtype=debug -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled -Dfcft:test-text-shaping=true ../..
+      - meson setup --buildtype=debug -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled -Dfcft:test-text-shaping=true ../..
       - ninja -v -k0
       - ninja -v test
       - ./foot --version
@@ -59,7 +59,7 @@ steps:
       # Release (gcc)
       - mkdir -p bld/release-x64
       - cd bld/release-x64
-      - meson --buildtype=release -Db_pgo=generate -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled  -Dfcft:test-text-shaping=true ../..
+      - meson setup --buildtype=release -Db_pgo=generate -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled  -Dfcft:test-text-shaping=true ../..
       - ninja -v -k0
       - ninja -v test
       - ./foot --version
@@ -69,7 +69,7 @@ steps:
       # Release (clang)
       - mkdir -p bld/release-x64-clang
       - cd bld/release-x64-clang
-      - CC=clang meson --buildtype=release -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled  -Dfcft:test-text-shaping=true ../..
+      - CC=clang meson setup --buildtype=release -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled  -Dfcft:test-text-shaping=true ../..
       - ninja -v -k0
       - ninja -v test
       - ./foot --version
@@ -80,7 +80,7 @@ steps:
       - apk del harfbuzz harfbuzz-dev utf8proc utf8proc-dev
       - mkdir -p bld/debug
       - cd bld/debug
-      - meson --buildtype=debug -Dgrapheme-clustering=disabled -Dfcft:grapheme-shaping=disabled -Dfcft:run-shaping=disabled -Dfcft:test-text-shaping=false ../..
+      - meson setup --buildtype=debug -Dgrapheme-clustering=disabled -Dfcft:grapheme-shaping=disabled -Dfcft:run-shaping=disabled -Dfcft:test-text-shaping=false ../..
       - ninja -v -k0
       - ninja -v test
       - ./foot --version
@@ -106,7 +106,7 @@ steps:
       # Debug
       - mkdir -p bld/debug-x86
       - cd bld/debug-x86
-      - meson --buildtype=debug -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled -Dfcft:test-text-shaping=true ../..
+      - meson setup --buildtype=debug -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled -Dfcft:test-text-shaping=true ../..
       - ninja -v -k0
       - ninja -v test
       - ./foot --version
@@ -116,7 +116,7 @@ steps:
       # Release (gcc)
       - mkdir -p bld/release-x86
       - cd bld/release-x86
-      - meson --buildtype=release -Db_pgo=generate -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled -Dfcft:test-text-shaping=true ../..
+      - meson setup --buildtype=release -Db_pgo=generate -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled -Dfcft:test-text-shaping=true ../..
       - ninja -v -k0
       - ninja -v test
       - ./foot --version
@@ -126,7 +126,7 @@ steps:
       # Release (clang)
       - mkdir -p bld/release-x86-clang
       - cd bld/release-x86-clang
-      - CC=clang meson --buildtype=release -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled -Dfcft:test-text-shaping=true ../..
+      - CC=clang meson setup --buildtype=release -Dgrapheme-clustering=enabled -Dfcft:grapheme-shaping=enabled -Dfcft:run-shaping=enabled -Dfcft:test-text-shaping=true ../..
       - ninja -v -k0
       - ninja -v test
       - ./foot --version
