@@ -60,6 +60,13 @@
 ## Unreleased
 ### Added
 ### Changed
+
+* The `CSI 21 t` (report window title) and `OSC 176 ?` (report app-id)
+  escape sequences are now ignored ([#1894][1894]).
+
+[1894]: https://codeberg.org/dnkl/foot/issues/1894
+
+
 ### Deprecated
 ### Removed
 ### Fixed
