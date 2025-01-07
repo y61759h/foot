@@ -1498,6 +1498,7 @@ osc_dispatch(struct terminal *term)
 
     case 176:
         if (string[0] == '?' && string[1] == '\0') {
+#if 0  /* Disabled for now, see #1894 */
             const char *terminator = term->vt.osc.bel ? "\a" : "\033\\";
             char *reply = xasprintf(
                 "\033]176;%s%s",
@@ -1506,6 +1507,9 @@ osc_dispatch(struct terminal *term)
 
             term_to_slave(term, reply, strlen(reply));
             free(reply);
+#else
+            LOG_WARN("OSC-176 app-id query ignored");
+#endif
             break;
         }
 
