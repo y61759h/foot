@@ -391,9 +391,6 @@ manipulation sequences. The generic format is:
 |  20
 :  -
 :  Report icon label.
-|  21
-:  -
-:  Report window title.
 |  22
 :  -
 :  Push window title+icon.
