@@ -1354,10 +1354,14 @@ csi_dispatch(struct terminal *term, uint8_t final)
             }
 
             case 21: {
+#if 0  /* Disabled for now, see #1894 */
                 char reply[3 + strlen(term->window_title) + 2 + 1];
                 int chars = xsnprintf(
                     reply, sizeof(reply), "\033]l%s\033\\", term->window_title);
                 term_to_slave(term, reply, chars);
+#else
+                LOG_WARN("CSI 21 t (report window title) ignored");
+#endif
                 break;
             }
 
