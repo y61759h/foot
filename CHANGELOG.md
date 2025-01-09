@@ -74,6 +74,10 @@
 * 'flash' overlay (triggered by either `tput flash`, or enabling
   `bell.visual` and then sending `BEL` to the terminal) stuck when
   `colors.flash-alpha=1.0`.
+* Crash when compositor sends a keyboard enter event before the foot
+  window has been mapped ([#1910][1910]).
+
+[1910]: https://codeberg.org/dnkl/foot/issues/1910
 
 
 ### Security
