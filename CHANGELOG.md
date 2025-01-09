@@ -70,6 +70,12 @@
 ### Deprecated
 ### Removed
 ### Fixed
+
+* 'flash' overlay (triggered by either `tput flash`, or enabling
+  `bell.visual` and then sending `BEL` to the terminal) stuck when
+  `colors.flash-alpha=1.0`.
+
+
 ### Security
 ### Contributors
 
