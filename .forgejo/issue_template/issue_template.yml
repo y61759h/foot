@@ -46,7 +46,7 @@ body:
     id: config
     attributes:
       label: Foot config
-      description: paste your entire `foot.ini` here
+      description: Paste your entire `foot.ini` here
     validations:
       required: true
   - type: textarea
