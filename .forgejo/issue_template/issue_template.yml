@@ -43,6 +43,13 @@ body:
     validations:
       required: true
   - type: textarea
+    id: config
+    attributes:
+      label: Foot config
+      description: paste your entire `foot.ini` here
+    validations:
+      required: true
+  - type: textarea
     id: repro
     attributes:
       label: Description of Bug and Steps to Reproduce
