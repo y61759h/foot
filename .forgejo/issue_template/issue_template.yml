@@ -74,8 +74,8 @@ body:
         other terminal multiplexer?  Does the bug happen in a plain
         foot instance?
 
-        **IME** do you use an IME? Which one? Does the bug happen if
-        you disable the IME?
+        **IME** do you use an IME (e.g. fcitx5, ibus etc)? Which one?
+        Does the bug happen if you disable the IME?
 
         Obtaining logs and stacktraces
         ------------------------------
