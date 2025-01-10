@@ -34,6 +34,14 @@ body:
       placeholder: "sway version 1.9"
     validations:
       required: true
+  - type: input
+    id: distro
+    attributes:
+      label: Distribution
+      description: "The name of the Linux distribution, or BSD flavor, you are running"
+      placeholder: "Arch Linux"
+    validations:
+      required: true
   - type: textarea
     id: repro
     attributes:
