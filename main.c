@@ -51,12 +51,13 @@ version_and_features(void)
 {
     static char buf[256];
     snprintf(buf, sizeof(buf),
-             "version: %s %cpgo %cime %cgraphemes %ctoplevel-icon %cassertions",
+             "version: %s %cpgo %cime %cgraphemes %ctoplevel-icon %csystem-bell %cassertions",
              FOOT_VERSION,
              feature_pgo() ? '+' : '-',
              feature_ime() ? '+' : '-',
              feature_graphemes() ? '+' : '-',
              feature_xdg_toplevel_icon() ? '+' : '-',
+             feature_xdg_system_bell() ? '+' : '-',
              feature_assertions() ? '+' : '-');
     return buf;
 }
