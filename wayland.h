@@ -24,6 +24,10 @@
  #include <xdg-toplevel-icon-v1.h>
 #endif
 
+#if defined(HAVE_XDG_SYSTEM_BELL)
+ #include <xdg-system-bell-v1.h>
+#endif
+
 #include <fcft/fcft.h>
 #include <tllist.h>
 
@@ -451,6 +455,10 @@ struct wayland {
     struct xdg_toplevel_icon_manager_v1 *toplevel_icon_manager;
 #endif
 
+#if defined(HAVE_XDG_SYSTEM_BELL)
+    struct xdg_system_bell_v1 *system_bell;
+#endif
+
     bool presentation_timings;
     struct wp_presentation *presentation;
     uint32_t presentation_clock_id;
@@ -492,6 +500,7 @@ void wayl_win_destroy(struct wl_window *win);
 void wayl_win_scale(struct wl_window *win, const struct buffer *buf);
 void wayl_win_alpha_changed(struct wl_window *win);
 bool wayl_win_set_urgent(struct wl_window *win);
+bool wayl_win_ring_bell(const struct wl_window *win);
 
 bool wayl_win_csd_titlebar_visible(const struct wl_window *win);
 bool wayl_win_csd_borders_visible(const struct wl_window *win);

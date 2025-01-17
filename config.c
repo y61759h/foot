@@ -1139,6 +1139,8 @@ parse_section_bell(struct context *ctx)
         return value_to_bool(ctx, &conf->bell.urgent);
     else if (streq(key, "notify"))
         return value_to_bool(ctx, &conf->bell.notify);
+    else if (streq(key, "system"))
+        return value_to_bool(ctx, &conf->bell.system_bell);
     else if (streq(key, "visual"))
         return value_to_bool(ctx, &conf->bell.flash);
     else if (streq(key, "command"))
@@ -3182,6 +3184,7 @@ config_load(struct config *conf, const char *conf_path,
             .urgent = false,
             .notify = false,
             .flash = false,
+            .system_bell = true,
             .command = {
                 .argv = {.args = NULL},
             },

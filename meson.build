@@ -179,6 +179,15 @@ else
   xdg_toplevel_icon = false
 endif
 
+if wayland_protocols.version().version_compare('>=1.38')
+  add_project_arguments('-DHAVE_XDG_SYSTEM_BELL', language: 'c')
+  wl_proto_xml += [wayland_protocols_datadir / 'staging/xdg-system-bell/xdg-system-bell-v1.xml']
+  xdg_system_bell = true
+else
+  xdg_system_bell = false
+endif
+
+
 foreach prot : wl_proto_xml
   wl_proto_headers += custom_target(
     prot.underscorify() + '-client-header',
@@ -414,6 +423,7 @@ summary(
     'IME': get_option('ime'),
     'Grapheme clustering': utf8proc.found(),
     'Wayland: xdg-toplevel-icon-v1': xdg_toplevel_icon,
+    'Wayland: xdg-system-bell-v1': xdg_system_bell,
     'utmp backend': utmp_backend,
     'utmp helper default path': utmp_default_helper_path,
     'Build terminfo': tic.found(),

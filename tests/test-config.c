@@ -579,6 +579,7 @@ test_section_bell(void)
 
     test_boolean(&ctx, &parse_section_bell, "urgent", &conf.bell.urgent);
     test_boolean(&ctx, &parse_section_bell, "notify", &conf.bell.notify);
+    test_boolean(&ctx, &parse_section_bell, "system", &conf.bell.system_bell);
     test_boolean(&ctx, &parse_section_bell, "command-focused",
                  &conf.bell.command_focused);
     test_spawn_template(&ctx, &parse_section_bell, "command",

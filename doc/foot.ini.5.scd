@@ -445,10 +445,17 @@ Note: do not set *TERM* here; use the *term* option in the main
 
 # SECTION: bell
 
+*system*
+	Boolean, when set to _yes_, ring the system bell. The bell is rung
+	independent of whether the foot window has keyboard focus or
+	not. Exact behavior is compositor dependent.
+	
+	Default: _yes_
+
 *urgent*
-	When set to _yes_, foot will signal urgency to the compositor
-	through the XDG activation protocol whenever *BEL* is received,
-	and the window does NOT have keyboard focus.
+	Boolean, when set to _yes_, foot will signal urgency to the
+	compositor through the XDG activation protocol whenever *BEL* is
+	received, and the window does NOT have keyboard focus.
 	
 	If the compositor does not implement this protocol, the margins
 	will be painted in red instead.
@@ -459,25 +466,25 @@ Note: do not set *TERM* here; use the *term* option in the main
 	Default: _no_
 
 *notify*
-	When set to _yes_, foot will emit a desktop notification using the
-	command specified in the *notify* option whenever *BEL* is
-	received. By default, bell notifications are shown only when the
-	window does *not* have keyboard focus. See
+	Boolean, when set to _yes_, foot will emit a desktop notification
+	using the command specified in the *notify* option whenever *BEL*
+	is received. By default, bell notifications are shown only when
+	the window does *not* have keyboard focus. See
 	_desktop-notifications.inhibit-when-focused_.
 
 	Default: _no_
 
 *visual*
-	When set to _yes_, foot will flash the terminal window. Default:
-	_no_
+	Boolean, when set to _yes_, foot will flash the terminal
+	window. Default: _no_
 
 *command*
 	When set, foot will execute this command when *BEL* is received.
 	Default: none
 
 *command-focused*
-	Whether to run the command on *BEL* even while focused. Default:
-	_no_
+	Boolean, whether to run the command on *BEL* even while
+	focused. Default: _no_
 
 # SECTION: desktop-notifications
 

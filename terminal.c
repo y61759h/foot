@@ -3683,6 +3683,9 @@ term_bell(struct terminal *term)
         }
     }
 
+    if (term->conf->bell.system_bell)
+        wayl_win_ring_bell(term->window);
+
     if (term->conf->bell.notify) {
         notify_notify(term, &(struct notification){
             .title = xstrdup("Bell"),

@@ -58,7 +58,14 @@
 
 
 ## Unreleased
+
 ### Added
+
+* Support for the new Wayland protocol `xdg-system-bell-v1` protocol
+  (added in wayland-protocols 1.38), via the new config option
+  `bell.system=no|yes` (defaults to `yes`).
+
+
 ### Changed
 
 * The `CSI 21 t` (report window title) and `OSC 176 ?` (report app-id)

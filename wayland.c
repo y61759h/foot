@@ -1374,6 +1374,17 @@ handle_global(void *data, struct wl_registry *registry,
     }
 #endif
 
+#if defined(HAVE_XDG_SYSTEM_BELL)
+    else if (streq(interface, xdg_system_bell_v1_interface.name)) {
+        const uint32_t required = 1;
+        if (!verify_iface_version(interface, version, required))
+            return;
+
+        wayl->system_bell = wl_registry_bind(
+            wayl->registry, name, &xdg_system_bell_v1_interface, required);
+    }
+#endif
+
 #if defined(FOOT_IME_ENABLED) && FOOT_IME_ENABLED
     else if (streq(interface, zwp_text_input_manager_v3_interface.name)) {
         const uint32_t required = 1;
@@ -1696,6 +1707,10 @@ wayl_destroy(struct wayland *wayl)
         zwp_text_input_manager_v3_destroy(wayl->text_input_manager);
 #endif
 
+#if defined(HAVE_XDG_SYSTEM_BELL)
+    if (wayl->system_bell != NULL)
+        xdg_system_bell_v1_destroy(wayl->system_bell);
+#endif
 #if defined(HAVE_XDG_TOPLEVEL_ICON)
     if (wayl->toplevel_icon_manager != NULL)
         xdg_toplevel_icon_manager_v1_destroy(wayl->toplevel_icon_manager);
@@ -2245,6 +2260,28 @@ wayl_win_set_urgent(struct wl_window *win)
     }
 
     return false;
+}
+
+bool
+wayl_win_ring_bell(const struct wl_window *win)
+{
+#if defined(HAVE_XDG_SYSTEM_BELL)
+    if (win->term->wl->system_bell == NULL) {
+        static bool have_warned = false;
+
+        if (!have_warned) {
+            LOG_WARN("compositor does not implement the XDG system bell protocol");
+            have_warned = true;
+        }
+
+        return false;
+    }
+
+    xdg_system_bell_v1_ring(win->term->wl->system_bell, win->surface.surf);
+    return true;
+#else
+    return false;
+#endif
 }
 
 bool

@@ -101,6 +101,7 @@ wayl_win_init(struct terminal *term, const char *token)
 void wayl_win_destroy(struct wl_window *win) {}
 void wayl_win_alpha_changed(struct wl_window *win) {}
 bool wayl_win_set_urgent(struct wl_window *win) { return true; }
+bool wayl_win_ring_bell(const struct wl_window *win) { return true; }
 bool wayl_fractional_scaling(const struct wayland *wayl) { return true; }
 
 pid_t

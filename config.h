@@ -186,6 +186,7 @@ struct config {
         bool urgent;
         bool notify;
         bool flash;
+        bool system_bell;
         struct config_spawn_template command;
         bool command_focused;
     } bell;
