@@ -1,6 +1,6 @@
 # Changelog
 
-* [Unreleased](#unreleased)
+* [1.20.2](#1-20-2)
 * [1.20.1](#1-20-1)
 * [1.20.0](#1-20-0)
 * [1.19.0](#1-19-0)
@@ -57,8 +57,8 @@
 * [1.2.0](#1-2-0)
 
 
-## Unreleased
-### Added
+## 1.20.2
+
 ### Changed
 
 * The `CSI 21 t` (report window title) and `OSC 176 ?` (report app-id)
@@ -67,8 +67,6 @@
 [1894]: https://codeberg.org/dnkl/foot/issues/1894
 
 
-### Deprecated
-### Removed
 ### Fixed
 
 * 'flash' overlay (triggered by either `tput flash`, or enabling
@@ -80,8 +78,9 @@
 [1910]: https://codeberg.org/dnkl/foot/issues/1910
 
 
-### Security
 ### Contributors
+
+* Alexander Orzechowski
 
 
 ## 1.20.1
