@@ -1,6 +1,7 @@
 # Changelog
 
 * [Unreleased](#unreleased)
+* [1.20.2](#1-20-2)
 * [1.20.1](#1-20-1)
 * [1.20.0](#1-20-0)
 * [1.19.0](#1-19-0)
@@ -67,6 +68,16 @@
 
 
 ### Changed
+### Deprecated
+### Removed
+### Fixed
+### Security
+### Contributors
+
+
+## 1.20.2
+
+### Changed
 
 * The `CSI 21 t` (report window title) and `OSC 176 ?` (report app-id)
   escape sequences are now ignored ([#1894][1894]).
@@ -74,8 +85,6 @@
 [1894]: https://codeberg.org/dnkl/foot/issues/1894
 
 
-### Deprecated
-### Removed
 ### Fixed
 
 * 'flash' overlay (triggered by either `tput flash`, or enabling
@@ -83,12 +92,16 @@
   `colors.flash-alpha=1.0`.
 * Crash when compositor sends a keyboard enter event before the foot
   window has been mapped ([#1910][1910]).
+* Build failures (`utf8proc.h` not found) on at least FreeBSD, but
+  most likely other BSDs, as well as some Linuxes ([#1903][1903]).
 
 [1910]: https://codeberg.org/dnkl/foot/issues/1910
+[1903]: https://codeberg.org/dnkl/foot/issues/1903
 
 
-### Security
 ### Contributors
+
+* Alexander Orzechowski
 
 
 ## 1.20.1
@@ -97,6 +110,9 @@
 
 * Runtime changes to the app-id (OSC-176) now limits the app-id string
   to 2048 characters ([#1897][1897]).
+* `colors.flash-alpha` can no longer be set to 1.0 (i.e. fully
+  opaque). This fixes an issue where the window would be stuck in the
+  flash state.
 
 [1897]: https://codeberg.org/dnkl/foot/issues/1897
 
@@ -105,11 +121,8 @@
 
 * Regression: trying to print a Unicode _"Legacy Computing symbol"_,
   in the range U+1FB00 - U+1FB9B would crash foot ([#1901][1901]).
-* Build failures (`utf8proc.h` not found) on at least FreeBSD, but
-  most likely other BSDs, as well as some Linuxes ([#1903][1903]).
 
 [1901]: https://codeberg.org/dnkl/foot/issues/1901
-[1903]: https://codeberg.org/dnkl/foot/issues/1903
 
 
 ## 1.20.0
