@@ -845,6 +845,7 @@ action_utf8_print(struct terminal *term, char32_t wc)
                              cc->chars[0], base, cc->count, wanted_count, cc->chars[wanted_count - 1], wc);
 #endif
                     key++;
+                    key &= CELL_COMB_CHARS_HI - CELL_COMB_CHARS_LO;
                     collision_count++;
                     continue;
                 }
@@ -856,6 +857,7 @@ action_utf8_print(struct terminal *term, char32_t wc)
 
                 if (!match) {
                     key++;
+                    key &= CELL_COMB_CHARS_HI - CELL_COMB_CHARS_LO;
                     collision_count++;
                     continue;
                 }
