@@ -1279,74 +1279,82 @@ emit_escapes:
     int key = -1, alternate = -1, base = -1;
     char final;
 
+    const bool use_level0_sym =
+        (ctx->mods & ~seat->kbd.kitty_significant) == 0 && ctx->level0_syms.count > 0;
+
     if (info != NULL) {
         if (!info->is_modifier || report_all_as_escapes) {
             key = info->key;
             final = info->final;
+
+            if (use_level0_sym) {
+                xkb_keysym_t unshifted = xkb_keysym_to_utf32(ctx->level0_syms.syms[0]);
+                if (unshifted > 0) {
+                    alternate = key;
+                    key = unshifted;
+                }
+            }
         }
     } else {
         /*
          * Use keysym (typically its Unicode codepoint value).
          *
          * If the keysym is shifted, use its unshifted codepoint
-         * instead. In other words, ctrl+a and ctrl+shift+a should
-         * both use the same value for 'key' (97 - i.a. 'a').
+         * instead. In other words, ctrl+a and ctrl+shift+a should both
+         * use the same value for 'key' (97 - i.a. 'a').
          *
-         * However, don't do this if a non-significant modifier was
-         * used to generate the symbol. This is needed since we cannot
-         * encode non-significant modifiers, and thus the "extra"
-         * modifier(s) would get lost.
+         * However, don't do this if a non-significant modifier was used
+         * to generate the symbol. This is needed since we cannot encode
+         * non-significant modifiers, and thus the "extra" modifier(s)
+         * would get lost.
          *
          * Example:
          *
-         * the Swedish layout has '2', QUOTATION MARK ("double
-         * quote"), '@', and '²' on the same key. '2' is the base
-         * symbol.
+         * the Swedish layout has '2', QUOTATION MARK ("double quote"),
+         * '@', and '²' on the same key. '2' is the base symbol.
          *
          * Shift+2 results in QUOTATION MARK
          * AltGr+2 results in '@'
          * AltGr+Shift+2 results in '²'
          *
-         * The kitty kbd protocol can't encode AltGr. So, if we
-         * always used the base symbol ('2'), Alt+Shift+2 would
-         * result in the same escape sequence as
-         * AltGr+Alt+Shift+2.
+         * The kitty kbd protocol can't encode AltGr. So, if we always
+         * used the base symbol ('2'), Alt+Shift+2 would result in the
+         * same escape sequence as AltGr+Alt+Shift+2.
          *
          * (yes, this matches what kitty does, as of 0.23.1)
          */
 
-        const bool use_level0_sym = (ctx->mods & ~seat->kbd.kitty_significant) == 0;
-        const xkb_keysym_t sym_to_use = use_level0_sym && ctx->level0_syms.count > 0
-            ? ctx->level0_syms.syms[0]
-            : sym;
-
         if (composed)
             key = utf32[0];  /* TODO: what if there are multiple codepoints? */
         else {
-            key = xkb_keysym_to_utf32(sym_to_use);
+            key = xkb_keysym_to_utf32(
+                use_level0_sym ? ctx->level0_syms.syms[0] : sym);
+
             if (key == 0)
                 return false;
-
-            /* The *shifted* key. May be the same as the unshifted
-             * key - if so, this is filtered out below, when
-             * emitting the CSI */
-            alternate = xkb_keysym_to_utf32(sym);
         }
 
-        /* Base layout key. I.e the symbol the pressed key produces in
-         * the base/default layout (layout idx 0) */
-        const xkb_keysym_t *base_syms;
-        int base_sym_count = xkb_keymap_key_get_syms_by_level(
-            seat->kbd.xkb_keymap, ctx->key, 0, 0, &base_syms);
-
-        if (base_sym_count > 0)
-            base = xkb_keysym_to_utf32(base_syms[0]);
-
+        /*
+         * The *shifted* key. May be the same as the unshifted key -
+         * if so, this is filtered out below, when emitting the CSI.
+         *
+         * Note that normally, only the *unshifted* key is emitted - see below
+         */
+        alternate = xkb_keysym_to_utf32(sym);
         final = 'u';
     }
 
     if (key < 0)
         return false;
+
+    /* Base layout key. I.e the symbol the pressed key produces in
+     * the base/default layout (layout idx 0) */
+    const xkb_keysym_t *base_syms;
+    int base_sym_count = xkb_keymap_key_get_syms_by_level(
+        seat->kbd.xkb_keymap, ctx->key, 0, 0, &base_syms);
+
+    if (base_sym_count > 0)
+        base = xkb_keysym_to_utf32(base_syms[0]);
 
     xassert(encoded_mods >= 1);
 
