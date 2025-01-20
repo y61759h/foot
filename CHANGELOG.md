@@ -71,6 +71,13 @@
 ### Deprecated
 ### Removed
 ### Fixed
+
+* Kitty keyboard protocol: alternate key reporting failing to report
+  the alternate codepoint in some corner cases ([#1918][1918]).
+
+[1918]: https://codeberg.org/dnkl/foot/issues/1918
+
+
 ### Security
 ### Contributors
 

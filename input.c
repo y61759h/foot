@@ -1315,29 +1315,8 @@ emit_escapes:
          * (yes, this matches what kitty does, as of 0.23.1)
          */
 
-        /* Get the key's shift level */
-        xkb_level_index_t lvl = xkb_state_key_get_level(
-            seat->kbd.xkb_state, ctx->key, ctx->layout);
-
-        /* And get all modifier combinations that, combined with
-         * the pressed key, results in the current shift level */
-        xkb_mod_mask_t masks[32];
-        size_t mask_count = xkb_keymap_key_get_mods_for_level(
-            seat->kbd.xkb_keymap, ctx->key, ctx->layout, lvl,
-            masks, ALEN(masks));
-
-        /* Check modifier combinations - if a combination has
-         * modifiers not in our set of 'significant' modifiers,
-         * use key sym as-is */
-        bool use_level0_sym = true;
-        for (size_t i = 0; i < mask_count; i++) {
-            if ((masks[i] & ~seat->kbd.kitty_significant) > 0) {
-                use_level0_sym = false;
-                break;
-            }
-        }
-
-        xkb_keysym_t sym_to_use = use_level0_sym && ctx->level0_syms.count > 0
+        const bool use_level0_sym = (ctx->mods & ~seat->kbd.kitty_significant) == 0;
+        const xkb_keysym_t sym_to_use = use_level0_sym && ctx->level0_syms.count > 0
             ? ctx->level0_syms.syms[0]
             : sym;
 
