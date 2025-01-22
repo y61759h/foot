@@ -1944,8 +1944,8 @@ UNITTEST
         {
             /*
              * In the de(neo) layout, the Y key generates 'k'. This
-             * means we should get a key+alternate that indiciates
-             * 'k', but a base key that is 'y'.
+             * means we should get a key+alternate that indicates 'k',
+             * but a base key that is 'y'.
              */
             xkb_mod_mask_t mods = 1u << seat.kbd.mod_shift | 1u << seat.kbd.mod_alt;
             keyboard_modifiers(&seat, NULL, 1337, mods, 0, 0, 1);
