@@ -1896,6 +1896,52 @@ UNITTEST
             key_press_release(&seat, &term, 1337, KEY_BACKSPACE + 8, WL_KEYBOARD_KEY_STATE_RELEASED);
         }
 
+        {
+            xkb_mod_mask_t mods = 1u << seat.kbd.mod_ctrl;
+            keyboard_modifiers(&seat, NULL, 1337, mods, 0, 0, 0);
+            key_press_release(&seat, &term, 1337, KEY_ENTER + 8, WL_KEYBOARD_KEY_STATE_PRESSED);
+
+            char escape[64] = {0};
+            ssize_t count = read(chan[0], escape, sizeof(escape));
+
+            /* key; 13 = <enter>, alternate: N/A, base: N/A, 5 = ctrl */
+            const char expected_ctrl_enter[] = "\033[13;5u";
+            xassert(count == strlen(expected_ctrl_enter));
+            xassert(streq(escape, expected_ctrl_enter));
+
+            key_press_release(&seat, &term, 1337, KEY_ENTER + 8, WL_KEYBOARD_KEY_STATE_RELEASED);
+        }
+
+        {
+            xkb_mod_mask_t mods = 1u << seat.kbd.mod_ctrl;
+            keyboard_modifiers(&seat, NULL, 1337, mods, 0, 0, 0);
+            key_press_release(&seat, &term, 1337, KEY_TAB + 8, WL_KEYBOARD_KEY_STATE_PRESSED);
+
+            char escape[64] = {0};
+            ssize_t count = read(chan[0], escape, sizeof(escape));
+
+            /* key; 9 = <tab>, alternate: N/A, base: N/A, 5 = ctrl */
+            const char expected_ctrl_tab[] = "\033[9;5u";
+            xassert(count == strlen(expected_ctrl_tab));
+            xassert(streq(escape, expected_ctrl_tab));
+
+            key_press_release(&seat, &term, 1337, KEY_TAB + 8, WL_KEYBOARD_KEY_STATE_RELEASED);
+        }
+
+        {
+            xkb_mod_mask_t mods = 1u << seat.kbd.mod_ctrl | 1u << seat.kbd.mod_shift;
+            keyboard_modifiers(&seat, NULL, 1337, mods, 0, 0, 0);
+            key_press_release(&seat, &term, 1337, KEY_LEFT + 8, WL_KEYBOARD_KEY_STATE_PRESSED);
+
+            char escape[64] = {0};
+            ssize_t count = read(chan[0], escape, sizeof(escape));
+
+            const char expected_ctrl_shift_left[] = "\033[1;6D";
+            xassert(count == strlen(expected_ctrl_shift_left));
+            xassert(streq(escape, expected_ctrl_shift_left));
+
+            key_press_release(&seat, &term, 1337, KEY_LEFT + 8, WL_KEYBOARD_KEY_STATE_RELEASED);
+        }
         key_binding_unload_keymap(key_binding_manager, &seat);
         key_binding_remove_seat(key_binding_manager, &seat);
 
