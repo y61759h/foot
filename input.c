@@ -1276,67 +1276,47 @@ emit_escapes:
         encoded_mods |= mods & (1 << seat->kbd.mod_num)   ? (1 << 7) : 0;
     encoded_mods++;
 
-    int key = -1, alternate = -1, base = -1;
+    /*
+     * Figure out the main, alternate and base key codes.
+     *
+     * The main key is the unshifted version of the generated symbol,
+     * the alternate key is the shifted version, and base is the
+     * (unshifted) key assuming the default layout.
+     *
+     * For example, the user presses shift+a, then:
+     *   - unshifted = 'a'
+     *   - shifted = 'A'
+     *   - base = 'a'
+     *
+     * Base will in many cases be the same as the unshifted key, but
+     * may differ if the active keyboard layout is non-ASCII (examples
+     * would be russian, or alternative layouts like neo etc).
+     *
+     * The shifted key is what we get from XKB, i.e. the resulting key
+     * from all active modifiers, plus the pressed key.
+     */
+    int unshifted = -1, shifted = -1, base = -1;
     char final;
 
-    const bool use_level0_sym =
-        (ctx->mods & ~seat->kbd.kitty_significant) == 0 && ctx->level0_syms.count > 0;
-
-    int unshifted = use_level0_sym ? xkb_keysym_to_utf32(ctx->level0_syms.syms[0]) : 0;
-
     if (info != NULL) {
+        /* Use code from lookup table (cursor keys, enter, tab etc)*/
         if (!info->is_modifier || report_all_as_escapes) {
-            key = info->key;
+            shifted = info->key;
             final = info->final;
         }
     } else {
-        /*
-         * Use keysym (typically its Unicode codepoint value).
-         *
-         * If the keysym is shifted, use its unshifted codepoint
-         * instead. In other words, ctrl+a and ctrl+shift+a should both
-         * use the same value for 'key' (97 - i.a. 'a').
-         *
-         * However, don't do this if a non-significant modifier was used
-         * to generate the symbol. This is needed since we cannot encode
-         * non-significant modifiers, and thus the "extra" modifier(s)
-         * would get lost.
-         *
-         * Example:
-         *
-         * the Swedish layout has '2', QUOTATION MARK ("double quote"),
-         * '@', and '²' on the same key. '2' is the base symbol.
-         *
-         * Shift+2 results in QUOTATION MARK
-         * AltGr+2 results in '@'
-         * AltGr+Shift+2 results in '²'
-         *
-         * The kitty kbd protocol can't encode AltGr. So, if we always
-         * used the base symbol ('2'), Alt+Shift+2 would result in the
-         * same escape sequence as AltGr+Alt+Shift+2.
-         *
-         * (yes, this matches what kitty does, as of 0.23.1)
-         */
+        /* Use keysym (typically its Unicode codepoint value) */
 
         if (composed)
-            key = utf32[0];  /* TODO: what if there are multiple codepoints? */
-        else {
-            key = xkb_keysym_to_utf32(sym);
-
-            if (key == 0)
-                return false;
-        }
+            shifted = utf32[0];  /* TODO: what if there are multiple codepoints? */
+        else
+            shifted = xkb_keysym_to_utf32(sym);
 
         final = 'u';
     }
 
-    if (key < 0)
+    if (shifted <= 0)
         return false;
-
-    if (unshifted > 0 && isc32print(unshifted)) {
-        alternate = key;
-        key = unshifted;
-    }
 
     /* Base layout key. I.e the symbol the pressed key produces in
      * the base/default layout (layout idx 0) */
@@ -1346,6 +1326,36 @@ emit_escapes:
 
     if (base_sym_count > 0)
         base = xkb_keysym_to_utf32(base_syms[0]);
+
+    /*
+     * If the keysym is shifted, use its unshifted codepoint
+     * instead. In other words, ctrl+a and ctrl+shift+a should both
+     * use the same value for 'key' (97 - i.a. 'a').
+     *
+     * However, don't do this if a non-significant modifier was used
+     * to generate the symbol. This is needed since we cannot encode
+     * non-significant modifiers, and thus the "extra" modifier(s)
+     * would get lost.
+     *
+     * Example:
+     *
+     * the Swedish layout has '2', QUOTATION MARK ("double quote"),
+     * '@', and '²' on the same key. '2' is the base symbol.
+     *
+     * Shift+2 results in QUOTATION MARK
+     * AltGr+2 results in '@'
+     * AltGr+Shift+2 results in '²'
+     *
+     * The kitty kbd protocol can't encode AltGr. So, if we always
+     * used the base symbol ('2'), Alt+Shift+2 would result in the
+     * same escape sequence as AltGr+Alt+Shift+2.
+     *
+     * (yes, this matches what kitty does, as of 0.23.1)
+     */
+    const bool use_level0_sym =
+        (ctx->mods & ~seat->kbd.kitty_significant) == 0 && ctx->level0_syms.count > 0;
+
+    unshifted = use_level0_sym ? xkb_keysym_to_utf32(ctx->level0_syms.syms[0]) : 0;
 
     xassert(encoded_mods >= 1);
 
@@ -1362,6 +1372,9 @@ emit_escapes:
     char buf[128], *p = buf;
     size_t left = sizeof(buf);
     size_t bytes;
+
+    const int key = unshifted > 0 && isc32print(unshifted) ? unshifted : shifted;
+    const int alternate = shifted;
 
     if (final == 'u' || final == '~') {
         bytes = snprintf(p, left, "\x1b[%u", key);
