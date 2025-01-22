@@ -1213,7 +1213,7 @@ kitty_kbd_protocol(struct seat *seat, struct terminal *term,
 
     bool is_text = count > 0 && utf32 != NULL && (mods & ~locked & ~consumed) == 0;
     for (size_t i = 0; utf32[i] != U'\0'; i++) {
-        if (!iswprint(utf32[i])) {
+        if (!isc32print(utf32[i])) {
             is_text = false;
             break;
         }
@@ -1282,18 +1282,12 @@ emit_escapes:
     const bool use_level0_sym =
         (ctx->mods & ~seat->kbd.kitty_significant) == 0 && ctx->level0_syms.count > 0;
 
+    int unshifted = use_level0_sym ? xkb_keysym_to_utf32(ctx->level0_syms.syms[0]) : 0;
+
     if (info != NULL) {
         if (!info->is_modifier || report_all_as_escapes) {
             key = info->key;
             final = info->final;
-
-            if (use_level0_sym) {
-                xkb_keysym_t unshifted = xkb_keysym_to_utf32(ctx->level0_syms.syms[0]);
-                if (unshifted > 0) {
-                    alternate = key;
-                    key = unshifted;
-                }
-            }
         }
     } else {
         /*
@@ -1327,25 +1321,22 @@ emit_escapes:
         if (composed)
             key = utf32[0];  /* TODO: what if there are multiple codepoints? */
         else {
-            key = xkb_keysym_to_utf32(
-                use_level0_sym ? ctx->level0_syms.syms[0] : sym);
+            key = xkb_keysym_to_utf32(sym);
 
             if (key == 0)
                 return false;
         }
 
-        /*
-         * The *shifted* key. May be the same as the unshifted key -
-         * if so, this is filtered out below, when emitting the CSI.
-         *
-         * Note that normally, only the *unshifted* key is emitted - see below
-         */
-        alternate = xkb_keysym_to_utf32(sym);
         final = 'u';
     }
 
     if (key < 0)
         return false;
+
+    if (unshifted > 0 && isc32print(unshifted)) {
+        alternate = key;
+        key = unshifted;
+    }
 
     /* Base layout key. I.e the symbol the pressed key produces in
      * the base/default layout (layout idx 0) */
@@ -1378,7 +1369,7 @@ emit_escapes:
 
         if (report_alternate) {
             bool emit_alternate = alternate > 0 && alternate != key;
-            bool emit_base = base > 0 && base != key && base != alternate;
+            bool emit_base = base > 0 && base != key && base != alternate && isc32print(base);
 
             if (emit_alternate) {
                 bytes = snprintf(p, left, ":%u", alternate);
@@ -1887,6 +1878,22 @@ UNITTEST
             xassert(streq(escape, expected_altgr_alt_shift_2));
 
             key_press_release(&seat, &term, 1337, KEY_2 + 8, WL_KEYBOARD_KEY_STATE_RELEASED);
+        }
+
+        {
+            xkb_mod_mask_t mods = 1u << seat.kbd.mod_alt;
+            keyboard_modifiers(&seat, NULL, 1337, mods, 0, 0, 0);
+            key_press_release(&seat, &term, 1337, KEY_BACKSPACE + 8, WL_KEYBOARD_KEY_STATE_PRESSED);
+
+            char escape[64] = {0};
+            ssize_t count = read(chan[0], escape, sizeof(escape));
+
+            /* key; 127 = <backspace>, alternate: N/A, base: N/A, 3 = alt */
+            const char expected_alt_backspace[] = "\033[127;3u";
+            xassert(count == strlen(expected_alt_backspace));
+            xassert(streq(escape, expected_alt_backspace));
+
+            key_press_release(&seat, &term, 1337, KEY_BACKSPACE + 8, WL_KEYBOARD_KEY_STATE_RELEASED);
         }
 
         key_binding_unload_keymap(key_binding_manager, &seat);
