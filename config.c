@@ -3729,6 +3729,11 @@ config_font_parse(const char *pattern, struct config_font *font)
 
     LOG_DBG("%s: pt-size=%.2f, px-size=%d", stripped_pattern, pt_size, px_size);
 
+    if (stripped_pattern == NULL) {
+        LOG_ERR("failed to convert font pattern to string");
+        return false;
+    }
+
     *font = (struct config_font){
         .pattern = stripped_pattern,
         .pt_size = pt_size,
