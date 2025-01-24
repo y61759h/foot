@@ -401,10 +401,10 @@ main(int argc, char *const *argv)
 
     const char *cwd = custom_cwd;
     if (cwd == NULL) {
-        errno = 0;
         size_t buf_len = 1024;
         do {
             _cwd = xrealloc(_cwd, buf_len);
+            errno = 0;
             if (getcwd(_cwd, buf_len) == NULL && errno != ERANGE) {
                 LOG_ERRNO("failed to get current working directory");
                 goto err;
