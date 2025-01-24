@@ -74,6 +74,9 @@
 
 * Kitty keyboard protocol: alternate key reporting failing to report
   the alternate codepoint in some corner cases ([#1918][1918]).
+* `foot` and `footclient` hanging, or terminating with `SIGABRT`, when
+  starting inside a directory whose total length is more than 1024
+  characters.
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 
