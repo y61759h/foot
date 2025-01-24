@@ -647,26 +647,6 @@ action_put(struct terminal *term, uint8_t c)
     dcs_put(term, c);
 }
 
-static inline uint32_t
-chain_key(uint32_t old_key, uint32_t new_wc)
-{
-    unsigned bits = 32 - __builtin_clz(CELL_COMB_CHARS_HI - CELL_COMB_CHARS_LO);
-
-    /* Rotate old key 8 bits */
-    uint32_t new_key = (old_key << 8) | (old_key >> (bits - 8));
-
-    /* xor with new char */
-    new_key ^= new_wc;
-
-    /* Multiply with magic hash constant */
-    new_key *= 2654435761ul;
-
-    /* And mask, to ensure the new value is within range */
-    new_key &= CELL_COMB_CHARS_HI - CELL_COMB_CHARS_LO;
-
-    return new_key;
-}
-
 #if defined(FOOT_GRAPHEME_CLUSTERING)
 static int
 emoji_vs_compare(const void *_key, const void *_entry)
@@ -738,9 +718,9 @@ action_utf8_print(struct terminal *term, char32_t wc)
         if (composed != NULL) {
             base = composed->chars[0];
             last = composed->chars[composed->count - 1];
-            key = chain_key(composed->key, wc);
+            key = composed_key_from_key(composed->key, wc);
         } else
-            key = chain_key(base, wc);
+            key = composed_key_from_key(base, wc);
 
 #if defined(FOOT_GRAPHEME_CLUSTERING)
         if (grapheme_clustering) {

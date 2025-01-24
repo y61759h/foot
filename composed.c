@@ -4,6 +4,52 @@
 #include <stdbool.h>
 
 #include "debug.h"
+#include "terminal.h"
+
+uint32_t
+composed_key_from_chars(const uint32_t chars[], size_t count)
+{
+    if (count == 0)
+        return 0;
+
+    uint32_t key = chars[0];
+    for (size_t i = 1; i < count; i++)
+        key = composed_key_from_key(key, chars[i]);
+
+    return key;
+}
+
+uint32_t
+composed_key_from_key(uint32_t prev_key, uint32_t next_char)
+{
+    unsigned bits = 32 - __builtin_clz(CELL_COMB_CHARS_HI - CELL_COMB_CHARS_LO);
+
+    /* Rotate old key 8 bits */
+    uint32_t new_key = (prev_key << 8) | (prev_key >> (bits - 8));
+
+    /* xor with new char */
+    new_key ^= next_char;
+
+    /* Multiply with magic hash constant */
+    new_key *= 2654435761ul;
+
+    /* And mask, to ensure the new value is within range */
+    new_key &= CELL_COMB_CHARS_HI - CELL_COMB_CHARS_LO;
+    return new_key;
+}
+
+UNITTEST
+{
+    const char32_t chars[] = U"abcdef";
+
+    uint32_t k1 = composed_key_from_key(chars[0], chars[1]);
+    uint32_t k2 = composed_key_from_chars(chars, 2);
+    xassert(k1 == k2);
+
+    uint32_t k3 = composed_key_from_key(k2, chars[2]);
+    uint32_t k4 = composed_key_from_chars(chars, 3);
+    xassert(k3 == k4);
+}
 
 struct composed *
 composed_lookup(struct composed *root, uint32_t key)

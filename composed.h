@@ -12,6 +12,9 @@ struct composed {
     uint8_t width;
 };
 
+uint32_t composed_key_from_chars(const uint32_t chars[], size_t count);
+uint32_t composed_key_from_key(uint32_t prev_key, uint32_t next_char);
+
 struct composed *composed_lookup(struct composed *root, uint32_t key);
 void composed_insert(struct composed **root, struct composed *node);
 
