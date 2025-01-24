@@ -793,60 +793,21 @@ action_utf8_print(struct terminal *term, char32_t wc)
 
             xassert(wanted_count <= 255);
 
-            size_t collision_count = 0;
+            /* Check if we already have a match for the entire compose chain */
+            const struct composed *cc =
+                composed_lookup_without_collision(
+                    term->composed, &key,
+                    composed != NULL ? composed->chars : &(char32_t){base},
+                    composed != NULL ? composed->count : 1,
+                    wc, 0);
 
-            /* Look for existing combining chain */
-            while (true) {
-                if (unlikely(collision_count > 128)) {
-                    static bool have_warned = false;
-                    if (!have_warned) {
-                        have_warned = true;
-                        LOG_WARN("ignoring composed character: "
-                                 "too many collisions in hash table");
-                    }
-                    return;
-                }
-
-                const struct composed *cc = composed_lookup(term->composed, key);
-                if (cc == NULL)
-                    break;
-
-                /*
-                 * We may have a key collisison, so need to check that
-                 * it's a true match. If not, bump the key and try
-                 * again.
-                 */
-
-                xassert(key == cc->key);
-                if (cc->chars[0] != base ||
-                    cc->count != wanted_count ||
-                    cc->chars[wanted_count - 1] != wc)
-                {
-#if 0
-                    LOG_WARN("COLLISION: base: %04x/%04x, count: %d/%zu, last: %04x/%04x",
-                             cc->chars[0], base, cc->count, wanted_count, cc->chars[wanted_count - 1], wc);
-#endif
-                    key++;
-                    key &= CELL_COMB_CHARS_HI - CELL_COMB_CHARS_LO;
-                    collision_count++;
-                    continue;
-                }
-
-                bool match = composed != NULL
-                    ? memcmp(&cc->chars[1], &composed->chars[1],
-                             (wanted_count - 2) * sizeof(cc->chars[0])) == 0
-                    : true;
-
-                if (!match) {
-                    key++;
-                    key &= CELL_COMB_CHARS_HI - CELL_COMB_CHARS_LO;
-                    collision_count++;
-                    continue;
-                }
-
+            if (cc != NULL) {
+                /* We *do* have a match! */
                 wc = CELL_COMB_CHARS_LO + cc->key;
                 width = cc->width;
                 goto out;
+            } else {
+                /* No match - allocate a new chain below */
             }
 
             if (unlikely(term->composed_count >=
@@ -867,6 +828,7 @@ action_utf8_print(struct terminal *term, char32_t wc)
             new_cc->count = wanted_count;
             new_cc->chars[0] = base;
             new_cc->chars[wanted_count - 1] = wc;
+            new_cc->forced_width = 0;
 
             if (composed != NULL) {
                 memcpy(&new_cc->chars[1], &composed->chars[1],
@@ -923,7 +885,7 @@ action_utf8_print(struct terminal *term, char32_t wc)
             term->composed_count++;
             composed_insert(&term->composed, new_cc);
 
-            wc = CELL_COMB_CHARS_LO + key;
+            wc = CELL_COMB_CHARS_LO + new_cc->key;
             width = new_cc->width;
 
             xassert(wc >= CELL_COMB_CHARS_LO);

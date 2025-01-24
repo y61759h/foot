@@ -51,7 +51,7 @@ UNITTEST
     xassert(k3 == k4);
 }
 
-struct composed *
+const struct composed *
 composed_lookup(struct composed *root, uint32_t key)
 {
     struct composed *node = root;
@@ -61,6 +61,41 @@ composed_lookup(struct composed *root, uint32_t key)
             return node;
 
         node = key < node->key ? node->left : node->right;
+    }
+
+    return NULL;
+}
+
+const struct composed *
+composed_lookup_without_collision(struct composed *root, uint32_t *key,
+                                  const char32_t *prefix_text, size_t prefix_len,
+                                  char32_t wc, int forced_width)
+{
+    while (true) {
+        const struct composed *cc = composed_lookup(root, *key);
+        if (cc == NULL)
+            return NULL;
+
+        bool match = cc->count == prefix_len + 1 &&
+                     cc->forced_width == forced_width &&
+                     cc->chars[prefix_len] == wc;
+
+        if (match) {
+            for (size_t i = 0; i < prefix_len; i++) {
+                if (cc->chars[i] != prefix_text[i]) {
+                    match = false;
+                    break;
+                }
+            }
+        }
+
+        if (match)
+            return cc;
+
+        (*key)++;
+        *key &= CELL_COMB_CHARS_HI - CELL_COMB_CHARS_LO;
+
+        /* TODO: this will loop infinitly if the composed table is full */
     }
 
     return NULL;
