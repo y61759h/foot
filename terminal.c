@@ -3826,7 +3826,7 @@ print_spacer(struct terminal *term, int col, int remaining)
     struct cell *cell = &row->cells[col];
 
     cell->wc = CELL_SPACER + remaining;
-    cell->attrs = term->vt.attrs;
+    cell->attrs = (struct attributes){0};
 }
 
 /*
