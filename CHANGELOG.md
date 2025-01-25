@@ -77,6 +77,10 @@
 * `foot` and `footclient` hanging, or terminating with `SIGABRT`, when
   starting inside a directory whose total length is more than 1024
   characters.
+* Regression: reflowing (resizing the window) a line that ends with a
+  double-width glyph that was pushed to the next line due to there
+  being only one cell left on current line, did not remove the virtual
+  space inserted at the end of the current line.
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 

@@ -930,7 +930,8 @@ grid_resize_and_reflow(
 
         if (!old_row->linebreak && col_count > 0) {
             /* Don't truncate logical lines */
-            col_count = old_cols;
+            while (col_count < old_cols && old_row->cells[col_count].wc == 0)
+                col_count++;
         }
 
         xassert(col_count >= 0 && col_count <= old_cols);
