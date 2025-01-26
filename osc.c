@@ -1149,7 +1149,7 @@ kitty_text_size(struct terminal *term, char *string)
     if (wchars == NULL)
         return;
 
-    int width = 0;
+    int forced_width = 0;
 
     char *ctx = NULL;
     for (char *param = strtok_r(parameters, ":", &ctx);
@@ -1170,7 +1170,7 @@ kitty_text_size(struct terminal *term, char *string)
             unsigned long w = strtoul(value, &end, 10);
 
             if (*end == '\0' && errno == 0 && w <= 7) {
-                width = (int)w;
+                forced_width = (int)w;
                 break;
             } else
                 LOG_ERR("OSC-66: invalid 'w' value, ignoring");
@@ -1187,10 +1187,57 @@ kitty_text_size(struct terminal *term, char *string)
     }
 
     const size_t len = c32len(wchars);
+
+    if (forced_width == 0) {
+        /*
+         * w=0 means we split the text up as we'd normally do... Since
+         * we don't support any other parameters of the text-sizing
+         * protocol, that means we just process the string as if it
+         * has been printed without this OSC.
+         */
+        for (size_t i = 0; i < len; i++)
+            term_process_and_print_non_ascii(term, wchars[i]);
+        free(wchars);
+        return;
+    }
+
+    size_t max_cp_width = 0;
+    size_t all_cp_width = 0;
+
+    for (size_t i = 0; i < len; i++) {
+        const size_t cp_width = c32width(wchars[i]);
+        all_cp_width += cp_width;
+        max_cp_width = max(max_cp_width, cp_width);
+    }
+
+    size_t calculated_width = 0;
+    switch (term->conf->tweak.grapheme_width_method) {
+    case GRAPHEME_WIDTH_WCSWIDTH: calculated_width = all_cp_width; break;
+    case GRAPHEME_WIDTH_MAX:      calculated_width = max_cp_width; break;
+    case GRAPHEME_WIDTH_DOUBLE:   calculated_width = min(max_cp_width, 2); break;
+    }
+
+    const size_t width = forced_width == 0 ? calculated_width : forced_width;
+
+    LOG_DBG("len=%zu, forced=%d, calculated=%zu, using=%zu",
+            len, forced_width, calculated_width, width);
+
+    if (len == 1 && calculated_width == forced_width) {
+        /*
+         * Optimization: if there's a single codepoint, and either
+         * w=0, or the 'w' matches the calculated width, print
+         * codepoint directly instead of creating a combining
+         * character.
+         */
+        term_print(term, wchars[0], width);
+        free(wchars);
+        return;
+    }
+
     uint32_t key = composed_key_from_chars(wchars, len);
 
     const struct composed *composed = composed_lookup_without_collision(
-        term->composed, &key, wchars, len - 1, wchars[len - 1], width);
+        term->composed, &key, wchars, len - 1, wchars[len - 1], forced_width);
 
     if (composed == NULL) {
         struct composed *new_cc = xmalloc(sizeof(*new_cc));
@@ -1198,7 +1245,7 @@ kitty_text_size(struct terminal *term, char *string)
         new_cc->count = len;
         new_cc->key = key;
         new_cc->width = width;
-        new_cc->forced_width = width;
+        new_cc->forced_width = forced_width;
 
         term->composed_count++;
         composed_insert(&term->composed, new_cc);
