@@ -4295,17 +4295,24 @@ send_dimensions_to_client(struct terminal *term)
 static void
 set_size_from_grid(struct terminal *term, int *width, int *height, int cols, int rows)
 {
+    int new_width, new_height;
+
     /* Nominal grid dimensions */
-    *width = cols * term->cell_width;
-    *height = rows * term->cell_height;
+    new_width = cols * term->cell_width;
+    new_height = rows * term->cell_height;
 
     /* Include any configured padding */
-    *width += 2 * term->conf->pad_x * term->scale;
-    *height += 2 * term->conf->pad_y * term->scale;
+    new_width += 2 * term->conf->pad_x * term->scale;
+    new_height += 2 * term->conf->pad_y * term->scale;
 
     /* Round to multiples of scale */
-    *width = round(term->scale * round(*width / term->scale));
-    *height = round(term->scale * round(*height / term->scale));
+    new_width = round(term->scale * round(new_width / term->scale));
+    new_height = round(term->scale * round(new_height / term->scale));
+
+    if (width != NULL)
+        *width = new_width;
+    if (height != NULL)
+        *height = new_height;
 }
 
 /* Move to terminal.c? */
@@ -4336,34 +4343,54 @@ render_resize(struct terminal *term, int width, int height, uint8_t opts)
         set_size_from_grid(term, &width, &height, term->cols, term->rows);
     }
 
-    if (width == 0 && height == 0) {
-        /* The compositor is letting us choose the size */
-        if (term->stashed_width != 0 && term->stashed_height != 0) {
+    if (width == 0) {
+        /* The compositor is letting us choose the width */
+        if (term->stashed_width != 0) {
             /* If a default size is requested, prefer the "last used" size */
             width = term->stashed_width;
-            height = term->stashed_height;
         } else {
             /* Otherwise, use a user-configured size */
             switch (term->conf->size.type) {
             case CONF_SIZE_PX:
                 width = term->conf->size.width;
+
+                if (wayl_win_csd_borders_visible(term->window))
+                    width -= 2 * term->conf->csd.border_width_visible;
+
+                width *= scale;
+                break;
+
+            case CONF_SIZE_CELLS:
+                set_size_from_grid(term, &width, NULL,
+                                   term->conf->size.width, term->conf->size.height);
+                break;
+            }
+        }
+    }
+
+    if (height == 0) {
+        /* The compositor is letting us choose the height */
+        if (term->stashed_height != 0) {
+            /* If a default size is requested, prefer the "last used" size */
+            height = term->stashed_height;
+        } else {
+            /* Otherwise, use a user-configured size */
+            switch (term->conf->size.type) {
+            case CONF_SIZE_PX:
                 height = term->conf->size.height;
 
                 /* Take CSDs into account */
                 if (wayl_win_csd_titlebar_visible(term->window))
                     height -= term->conf->csd.title_height;
 
-                if (wayl_win_csd_borders_visible(term->window)) {
+                if (wayl_win_csd_borders_visible(term->window))
                     height -= 2 * term->conf->csd.border_width_visible;
-                    width -= 2 * term->conf->csd.border_width_visible;
-                }
 
-                width *= scale;
                 height *= scale;
                 break;
 
             case CONF_SIZE_CELLS:
-                set_size_from_grid(term, &width, &height,
+                set_size_from_grid(term, NULL, &height,
                                    term->conf->size.width, term->conf->size.height);
                 break;
             }

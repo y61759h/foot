@@ -68,6 +68,14 @@
 
 
 ### Changed
+
+* Do not try to set a zero width, or height, if the compositor sends a
+  _configure_ event with only one dimension being zero
+  ([#1925][1925]).
+
+[1925]: https://codeberg.org/dnkl/foot/issues/1925
+
+
 ### Deprecated
 ### Removed
 ### Fixed
