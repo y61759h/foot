@@ -1207,7 +1207,10 @@ kitty_text_size(struct terminal *term, char *string)
         free(wchars);
     }
 
-    term_print(term, CELL_COMB_CHARS_LO + composed->key, composed->forced_width > 0 ? composed->forced_width : composed->width);
+    term_print(
+        term, CELL_COMB_CHARS_LO + composed->key,
+        composed->forced_width > 0 ? composed->forced_width : composed->width,
+        false);
 }
 
 void
