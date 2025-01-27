@@ -42,6 +42,12 @@ body:
       placeholder: "Arch Linux"
     validations:
       required: true
+  - type: input
+    id: application
+    attributes:
+        label: Shell, TUI, application
+        description: "Application in which the problem occurs (list all known)"
+        placeholder: "e.g. bash, neovim"
   - type: textarea
     id: config
     attributes:
