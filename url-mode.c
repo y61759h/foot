@@ -178,11 +178,14 @@ urls_input(struct seat *seat, struct terminal *term,
            const xkb_keysym_t *raw_syms, size_t raw_count,
            uint32_t serial)
 {
-    /* Key bindings */
+    /*
+     * Key bindings
+     */
+
+    /* Match translated symbol */
     tll_foreach(bindings->url, it) {
         const struct key_binding *bind = &it->item;
 
-        /* Match translated symbol */
         if (bind->k.sym == sym &&
             bind->mods == (mods & ~consumed))
         {
@@ -190,6 +193,11 @@ urls_input(struct seat *seat, struct terminal *term,
             return;
         }
 
+    }
+
+    /* Match untranslated symbols */
+    tll_foreach(bindings->url, it) {
+        const struct key_binding *bind = &it->item;
         if (bind->mods != mods)
             continue;
 
@@ -199,6 +207,13 @@ urls_input(struct seat *seat, struct terminal *term,
                 return;
             }
         }
+    }
+
+    /* Match raw key code */
+    tll_foreach(bindings->url, it) {
+        const struct key_binding *bind = &it->item;
+        if (bind->mods != mods)
+            continue;
 
         /* Match raw key code */
         tll_foreach(bind->k.key_codes, code) {

@@ -89,8 +89,11 @@
   double-width glyph that was pushed to the next line due to there
   being only one cell left on current line, did not remove the virtual
   space inserted at the end of the current line.
+* Wrong key bindings executed when using alternative keyboard layouts
+  ([#1929][1929]).
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
+[1929]: https://codeberg.org/dnkl/foot/issues/1929
 
 
 ### Security

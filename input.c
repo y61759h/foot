@@ -1582,21 +1582,25 @@ key_press_release(struct seat *seat, struct terminal *term, uint32_t serial,
      * User configurable bindings
      */
     if (pressed) {
+        /* Match translated symbol */
         tll_foreach(bindings->key, it) {
             const struct key_binding *bind = &it->item;
 
-            /* Match translated symbol */
             if (bind->k.sym == sym &&
                 bind->mods == (mods & ~consumed) &&
                 execute_binding(seat, term, bind, serial, 1))
             {
                 goto maybe_repeat;
             }
+        }
+
+        /* Match untranslated symbols */
+        tll_foreach(bindings->key, it) {
+            const struct key_binding *bind = &it->item;
 
             if (bind->mods != mods)
                 continue;
 
-            /* Match untranslated symbols */
             for (size_t i = 0; i < raw_count; i++) {
                 if (bind->k.sym == raw_syms[i] &&
                     execute_binding(seat, term, bind, serial, 1))
@@ -1604,8 +1608,15 @@ key_press_release(struct seat *seat, struct terminal *term, uint32_t serial,
                     goto maybe_repeat;
                 }
             }
+        }
 
-            /* Match raw key code */
+        /* Match raw key code */
+        tll_foreach(bindings->key, it) {
+            const struct key_binding *bind = &it->item;
+
+            if (bind->mods != mods)
+                continue;
+
             tll_foreach(bind->k.key_codes, code) {
                 if (code->item == key &&
                     execute_binding(seat, term, bind, serial, 1))
