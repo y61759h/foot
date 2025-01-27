@@ -95,7 +95,7 @@ composed_lookup_without_collision(struct composed *root, uint32_t *key,
         (*key)++;
         *key &= CELL_COMB_CHARS_HI - CELL_COMB_CHARS_LO;
 
-        /* TODO: this will loop infinitly if the composed table is full */
+        /* TODO: this will loop infinitely if the composed table is full */
     }
 
     return NULL;
