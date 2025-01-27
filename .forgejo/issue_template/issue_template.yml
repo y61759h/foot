@@ -59,6 +59,7 @@ body:
     attributes:
       label: Foot config
       description: Paste your entire `foot.ini` here
+      render: ini
     validations:
       required: true
   - type: textarea
