@@ -1096,7 +1096,36 @@ Note that *Alt* is usually called *Mod1*.
 
 *xkbcli interactive-wayland* can be useful for finding keysym names.
 
-A key combination can only be mapped to *one* action. Lets say you
+When matching key presses to key bindings, foot uses a couple of
+different approaches.
+
+As an example, let's say you press ctrl+shift+c (assume plain us ASCII
+layout). XKB will tell foot *Control+C* was pressed. Note the lack of
+the shift modifier, and the upper case 'C'. Internally, this is called
+the "translated" form, and is what foot tries to match first.
+
+If no "translated" key bindings can be found, foot proceeds to
+checking the "untranslated" variant. Using the same example as above,
+this will match *Control+Shift+c* (shift modifier present, lower case
+'c').
+
+This means you can use either form in your foot configuration, and
+that *Control+C* (and similar) has higher priority than
+*Control+Shift+c*. Also note that while foot normally detects when the
+same combination is assigned to multiple actions, it will not detect
+*Control+C* vs. *Control+Shift+c* collisions. Call it a known bug...
+
+Finally, foot tries to match the raw key code. Here, the primary
+layout is queried for all key codes that generate a particular XKB
+symbol, and the pressed key's code is matched against this. For
+example, if you use the layouts *"us,de(neo)"*, the 'r' key generates
+the symbol 'c' in the neo layout. I.e. to get a 'c', you press
+'r'. The match logic described above will only match 'c' key bindings
+(e.g. *Control+Shift+c*). The raw mode however, will match 'r' key
+bindings (e.g. *Control+Shift+r*). This is useful for non-latin
+layouts, where you would otherwise have to customize all key bindings.
+
+A key combination can only be mapped to *one* action. Let's say you
 want to bind *Control+Shift+R* to *fullscreen*. Since this is the
 default shortcut for *search-start*, you first need to unmap the
 default binding. This can be done by setting _action=none_;
@@ -1453,7 +1482,7 @@ events never generate a *COUNT* larger than 1. That is,
 Foot also recognizes tiltable wheels; to map these, use
 *BTN_WHEEL_LEFT* and *BTN_WHEEL_RIGHT*.
 
-A modifier+button combination can only be mapped to *one* action. Lets
+A modifier+button combination can only be mapped to *one* action. Let's
 say you want to bind *BTN\_MIDDLE* to *fullscreen*. Since
 *BTN\_MIDDLE* is the default binding for *primary-paste*, you first
 need to unmap the default binding. This can be done by setting
