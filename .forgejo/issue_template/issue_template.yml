@@ -46,7 +46,7 @@ body:
     id: application
     attributes:
         label: Shell, TUI, application
-        description: "Application in which the problem occurs (list all known)"
+        description: "Application(s) in which the problem occurs (list all known)"
         placeholder: "e.g. bash, neovim"
   - type: textarea
     id: config
