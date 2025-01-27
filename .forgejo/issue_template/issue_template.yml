@@ -43,11 +43,17 @@ body:
     validations:
       required: true
   - type: input
+    id: multiplexer
+    attributes:
+      label: Terminal multiplexer
+      description: "Terminal multiplexers are terminal emulators themselves, therefore the issue may be in the multiplexer, not foot. Please list which multiplexer(s) you use here (and mention in the problem description below if the issue only occurs in the multiplexer, but not in bare metal foot)"
+      placeholder: "tmux, zellij"
+  - type: input
     id: application
     attributes:
-        label: Shell, TUI, application
-        description: "Application(s) in which the problem occurs (list all known)"
-        placeholder: "e.g. bash, neovim"
+      label: Shell, TUI, application
+      description: "Application(s) in which the problem occurs (list all known)"
+      placeholder: "e.g. bash, neovim"
   - type: textarea
     id: config
     attributes:
