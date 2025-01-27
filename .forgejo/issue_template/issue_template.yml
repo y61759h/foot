@@ -53,7 +53,7 @@ body:
     attributes:
       label: Shell, TUI, application
       description: "Application(s) in which the problem occurs (list all known)"
-      placeholder: "e.g. bash, neovim"
+      placeholder: "bash, neovim"
   - type: textarea
     id: config
     attributes:
