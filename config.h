@@ -1,7 +1,8 @@
 #pragma once
 
-#include <stdint.h>
+#include <regex.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <uchar.h>
 
 #include <xkbcommon/xkbcommon.h>
@@ -219,6 +220,9 @@ struct config {
             OSC8_UNDERLINE_URL_MODE,
             OSC8_UNDERLINE_ALWAYS,
         } osc8_underline;
+
+        char *regex;
+        regex_t preg;
     } url;
 
     struct {

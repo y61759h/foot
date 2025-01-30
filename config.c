@@ -1234,6 +1234,26 @@ parse_section_url(struct context *ctx)
             (int *)&conf->url.osc8_underline);
     }
 
+    else if (streq(key, "regex")) {
+        const char *regex = ctx->value;
+        regex_t preg;
+
+        int r = regcomp(&preg, regex, REG_EXTENDED);
+        if (r != 0) {
+            char err_buf[128];
+            regerror(r, &preg, err_buf, sizeof(err_buf));
+            LOG_CONTEXTUAL_ERR("invalid regex: %s", err_buf);
+            return false;
+        }
+
+        regfree(&conf->url.preg);
+        free(conf->url.regex);
+
+        conf->url.regex = xstrdup(regex);
+        conf->url.preg = preg;
+        return true;
+    }
+
     else {
         LOG_CONTEXTUAL_ERR("not a valid option: %s", key);
         return false;
@@ -3241,6 +3261,42 @@ config_load(struct config *conf, const char *conf_path,
     tokenize_cmdline("--action ${action-name}=${action-label}", &conf->desktop_notifications.command_action_arg.argv.args);
     tokenize_cmdline("xdg-open ${url}", &conf->url.launch.argv.args);
 
+    {
+        /*
+         * Based on https://gist.github.com/gruber/249502, but modified:
+         *  - Do not allow {} at all
+         *  - Do allow matched []
+         */
+        const char *url_regex_string =
+            "("
+                "[a-z][[:alnum:]-]+:"       // protocol
+                "("
+                    "/{1,3}|[a-z0-9%]"     // slashes (what's the OR part for?)
+                ")"
+                "|"
+                "www[:digit:]{0,3}[.]"
+                //"|"
+                //"[a-z0-9.\\-]+[.][a-z]{2,4}/"  /* "looks like domain name followed by a slash" - remove? */
+            ")"
+            "("
+                "[^[:space:](){}<>]+"
+                "|"
+                "\\(([^[:space:](){}<>]+|(\\([^[:space:](){}<>]+\\)))*\\)"
+                "|"
+                "\\[([^]\\[[:space:](){}<>]+|(\\[[^]\\[[:space:](){}<>]+\\]))*\\]"
+            ")+"
+            "("
+                "\\(([^[:space:](){}<>]+|(\\([^[:space:](){}<>]+\\)))*\\)"
+                "|"
+                "\\[([^]\\[[:space:](){}<>]+|(\\[[^]\\[[:space:](){}<>]+\\]))*\\]"
+                "|"
+                "[^]\\[[:space:]`!(){};:'\".,<>?«»“”‘’]"
+            ")"
+        ;
+        int r = regcomp(&conf->url.preg, url_regex_string, REG_EXTENDED);
+        xassert(r == 0);
+        conf->url.regex = xstrdup(url_regex_string);
+    }
 
     tll_foreach(*initial_user_notifications, it) {
         tll_push_back(conf->notifications, it->item);
@@ -3476,6 +3532,8 @@ config_clone(const struct config *old)
 
     conf->url.label_letters = xc32dup(old->url.label_letters);
     spawn_template_clone(&conf->url.launch, &old->url.launch);
+    conf->url.regex = xstrdup(old->url.regex);
+    regcomp(&conf->url.preg, conf->url.regex, REG_EXTENDED);
 
     key_binding_list_clone(&conf->bindings.key, &old->bindings.key);
     key_binding_list_clone(&conf->bindings.search, &old->bindings.search);
@@ -3556,6 +3614,8 @@ config_free(struct config *conf)
 
     free(conf->url.label_letters);
     spawn_template_free(&conf->url.launch);
+    regfree(&conf->url.preg);
+    free(conf->url.regex);
 
     free_key_binding_list(&conf->bindings.key);
     free_key_binding_list(&conf->bindings.search);

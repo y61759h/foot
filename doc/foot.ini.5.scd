@@ -782,6 +782,11 @@ xdgtoken=95ebdfe56e4f47ddb5bba9d7dc3a2c35
 	
 	Default: _sadfjklewcmpgh_.
 
+*regex*
+	URL regex to use when auto-detecting URLs. The format is
+	"POSIX-Extended Regular Expressions".
+	
+	Default: _TODO_
 
 # SECTION: cursor
 

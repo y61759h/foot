@@ -380,54 +380,7 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
         }
     }
 
-    /*
-     * Based on https://gist.github.com/gruber/249502, but modified:
-     *  - Do not allow {} at all
-     *  - Do allow matched []
-     */
-    regex_t preg;
-    const char *regex_string =
-        "("
-            "[a-z][[:alnum:]-]+:"       // protocol
-            "("
-                "/{1,3}|[a-z0-9%]"     // slashes (what's the OR part for?)
-            ")"
-            "|"
-            "www[:digit:]{0,3}[.]"
-            "|"
-            "[a-z0-9.\\-]+[.][a-z]{2,4}/"
-        ")"
-        "("
-            "[^[:space:](){}<>]+"
-            "|"
-            "\\(([^[:space:](){}<>]+|(\\([^[:space:](){}<>]+\\)))*\\)"
-            "|"
-            "\\[([^]\\[[:space:](){}<>]+|(\\[[^]\\[[:space:](){}<>]+\\]))*\\]"
-        ")+"
-        "("
-            "\\(([^[:space:](){}<>]+|(\\([^[:space:](){}<>]+\\)))*\\)"
-            "|"
-            "\\[([^]\\[[:space:](){}<>]+|(\\[[^]\\[[:space:](){}<>]+\\]))*\\]"
-            "|"
-            "[^]\\[[:space:]`!(){};:'\".,<>?«»“”‘’]"
-        ")"
-    ;
-
-    int r = regcomp(&preg, regex_string, REG_EXTENDED);
-
-    if (r != 0) {
-        char err_buf[1024];
-        regerror(r, &preg, err_buf, sizeof(err_buf));
-        LOG_ERR("failed to compile regular expression: %s", err_buf);
-
-        for (size_t i = 0; i < ALEN(vlines); i++) {
-            const struct vline *v = &vlines[i];
-            free(v->utf8);
-            free(v->map);
-        }
-
-        return;
-    }
+    const regex_t *preg = &term->conf->url.preg;
 
     for (size_t i = 0; i < ALEN(vlines); i++) {
         const struct vline *v = &vlines[i];
@@ -436,9 +389,8 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
 
         const char *search_string = v->utf8;
         while (true) {
-
-            regmatch_t matches[preg.re_nsub + 1];
-            r = regexec(&preg, search_string, preg.re_nsub + 1, matches, 0);
+            regmatch_t matches[preg->re_nsub + 1];
+            int r = regexec(preg, search_string, preg->re_nsub + 1, matches, 0);
 
             if (r == REG_NOMATCH)
                 break;
@@ -470,9 +422,8 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
         free(v->utf8);
         free(v->map);
     }
-
-    regfree(&preg);
 }
+
 static void
 osc8_uris(const struct terminal *term, enum url_action action, url_list_t *urls)
 {
