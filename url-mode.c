@@ -448,9 +448,9 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
             const size_t end = start + mlen;
 
             LOG_DBG(
-                "MATCH at %d: %.*s (%zu) row/col = %dx%d",
+                "regex match at row %d: %.*srow/col = %dx%d",
                 matches[0].rm_so, (int)mlen, &search_string[matches[0].rm_so],
-                mlen, v->map[start].row, v->map[start].col);
+                v->map[start].row, v->map[start].col);
 
             tll_push_back(
                 *urls,
