@@ -36,6 +36,13 @@ xrealloc(void *ptr, size_t size)
     return unlikely(size == 0) ? alloc : check_alloc(alloc);
 }
 
+void *
+xreallocarray(void *ptr, size_t n, size_t size)
+{
+    void *alloc = reallocarray(ptr, n, size);
+    return unlikely(size == 0) ? alloc : check_alloc(alloc);
+}
+
 char *
 xstrdup(const char *str)
 {
