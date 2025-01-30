@@ -4,6 +4,7 @@
 #include <string.h>
 #include <wctype.h>
 #include <unistd.h>
+#include <regex.h>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -288,6 +289,149 @@ urls_input(struct seat *seat, struct terminal *term,
         xassert(seq_len + 1 <= ALEN(term->url_keys));
         term->url_keys[seq_len] = wc;
         render_refresh_urls(term);
+    }
+}
+
+struct charmap {
+    const struct row *row;
+    int col;
+};
+
+struct vline {
+    char *utf8;
+    size_t len;
+    size_t sz;
+    struct charmap *map;
+};
+
+static void
+regex_detected(const struct terminal *term, enum url_action action, url_list_t *urls)
+{
+    struct vline vlines[term->rows];
+    size_t vline_idx = 0;
+
+    memset(vlines, 0, sizeof(vlines));
+    struct vline *vline = &vlines[vline_idx];
+
+    mbstate_t ps = {0};
+
+    for (int row_no = 0; row_no < term->rows; row_no++) {
+        const struct row *row = grid_row_in_view(term->grid, row_no);
+
+        for (int c = 0; c < term->cols; c++) {
+            const struct cell *cell = &row->cells[c];
+            const char32_t *wc = &cell->wc;
+            size_t wc_count = 1;
+
+            if (wc[0] >= CELL_COMB_CHARS_LO && wc[0] <= CELL_COMB_CHARS_HI) {
+                const struct composed *composed =
+                    composed_lookup(term->composed, wc[0] - CELL_COMB_CHARS_LO);
+                xassert(composed != NULL);
+
+                wc = composed->chars;
+                wc_count = composed->count;
+            }
+
+            for (size_t i = 0; i < wc_count; i++) {
+                char buf[16];
+                size_t char_len = c32rtomb(buf, wc[i], &ps);
+                if (char_len == (size_t)-1)
+                    continue;
+
+                if (vline->len == 0 && char_len == 1 && buf[0] == 0)
+                    continue;
+
+                for (size_t j = 0; j < char_len; j++) {
+                    if (vline->len + char_len > vline->sz) {
+                        /* TODO: grow dynamically */
+                        size_t new_count = (vline->len + char_len) * 2;
+                        vline->utf8 = xreallocarray(vline->utf8, new_count, 1);
+                        vline->map = xreallocarray(vline->map, new_count, sizeof(vline->map[0]));
+                    }
+
+                    vline->utf8[vline->len + j] = buf[j];
+                    vline->map[vline->len + j].col = c;
+                    vline->map[vline->len + j].row = row;
+                }
+
+                vline->len += char_len;
+            }
+        }
+
+        if (row->linebreak) {
+            if (vline->len > 0) {
+                vline->utf8[vline->len++] = '\0';
+                ps = (mbstate_t){0};
+
+                vline_idx++;
+                vline = &vlines[vline_idx];
+            }
+        }
+    }
+
+    // https://gist.github.com/gruber/249502
+    regex_t preg;
+    const char *foo =
+        "("
+            "[a-z][[:alpha:]-]+:"       // protocol
+            "("
+                "/{1,3}|[a-z0-9%]"     // slashes (what's the OR part for?)
+            ")"
+            "|"
+            "www[:digit:]{0,3}[.]"
+            "|"
+            "[a-z0-9.\\-]+[.][a-z]{2,4}/"
+        ")"
+        "("
+            "[^[:space:]()<>]+"
+            "|"
+            "\\(([^[:space:]()<>]+|(\\([^[:space:]()<>]+\\)))*\\)"
+        ")+"
+        "("
+            "\\(([^[:space:]()<>]+|(\\([^[:space:]()<>]+\\)))*\\)"
+            "|"
+        // TODO: figure out how to add \\] to the expression below...
+            "[^[:space:]`!()\\[{};:'\".,<>?«»“”‘’]"
+        ")"
+    ;
+
+    LOG_ERR("foo=%s", foo);
+
+    int r = regcomp(&preg, foo, REG_EXTENDED);
+
+    if (r != 0) {
+        char err_buf[1024];
+        regerror(r, &preg, err_buf, sizeof(err_buf));
+        LOG_ERR("regcomp: %s", err_buf);
+    } else {
+        size_t i = 0;
+        while (true) {
+            const struct vline *v = &vlines[i++];
+            if (v->utf8 == NULL)
+                break;
+
+
+            regmatch_t matches[preg.re_nsub + 1];
+            r = regexec(&preg, v->utf8, preg.re_nsub + 1, matches, 0);
+
+            if (r == REG_NOMATCH)
+                continue;
+
+            size_t mlen = matches[0].rm_eo - matches[0].rm_so;
+            LOG_WARN("MATCH at %d: %.*s (%zu)", matches[0].rm_so, (int)mlen, &v->utf8[matches[0].rm_so], mlen);
+        }
+        regfree(&preg);
+    }
+
+    size_t i = 0;
+    while (true) {
+        const struct vline *v = &vlines[i++];
+        if (v->utf8 == NULL)
+            break;
+
+        LOG_WARN("%.*s", (int)v->len, v->utf8);
+        free(v->utf8);
+        free(v->map);
     }
 }
 
@@ -634,6 +778,7 @@ urls_collect(const struct terminal *term, enum url_action action, url_list_t *ur
     xassert(tll_length(term->urls) == 0);
     osc8_uris(term, action, urls);
     auto_detected(term, action, urls);
+    regex_detected(term, action, urls);
     remove_overlapping(urls, term->grid->num_cols);
 }
 
