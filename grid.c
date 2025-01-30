@@ -36,7 +36,8 @@ grid_row_abs_to_sb(const struct grid *grid, int screen_rows, int abs_row)
     return rebased_row;
 }
 
-int grid_row_sb_to_abs(const struct grid *grid, int screen_rows, int sb_rel_row)
+int
+grid_row_sb_to_abs(const struct grid *grid, int screen_rows, int sb_rel_row)
 {
     const int scrollback_start = grid->offset + screen_rows;
     int abs_row = sb_rel_row + scrollback_start;
