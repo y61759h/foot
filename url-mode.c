@@ -292,21 +292,31 @@ urls_input(struct seat *seat, struct terminal *term,
     }
 }
 
-struct charmap {
-    const struct row *row;
-    int col;
-};
-
 struct vline {
     char *utf8;
-    size_t len;
-    size_t sz;
-    struct charmap *map;
+    size_t len;          /* Length of utf8[] */
+    size_t sz;           /* utf8[] allocated size */
+    struct coord *map;   /* Maps utf8[ofs] to grid coordinates */
 };
 
 static void
 regex_detected(const struct terminal *term, enum url_action action, url_list_t *urls)
 {
+    /*
+     * Use regcomp()+regexec() to find patterns.
+     *
+     * Since we can't feed regexec() one character at a time, and
+     * since it doesn't accept wide characters, we need to build utf8
+     * strings.
+     *
+     * Each string represents a logical line (i.e. handle line-wrap).
+     * To be able to map regex matches back to the grid, we store the
+     * grid coordinates of *each* character, in the line struct as
+     * well. This is offset based; utf8[ofs] has its grid coordinates
+     * in map[ofs.
+     */
+
+    /* There is *at most* term->rows logical lines */
     struct vline vlines[term->rows];
     size_t vline_idx = 0;
 
@@ -315,14 +325,15 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
 
     mbstate_t ps = {0};
 
-    for (int row_no = 0; row_no < term->rows; row_no++) {
-        const struct row *row = grid_row_in_view(term->grid, row_no);
+    for (int r = 0; r < term->rows; r++) {
+        const struct row *row = grid_row_in_view(term->grid, r);
 
         for (int c = 0; c < term->cols; c++) {
             const struct cell *cell = &row->cells[c];
             const char32_t *wc = &cell->wc;
             size_t wc_count = 1;
 
+            /* Expand combining characters */
             if (wc[0] >= CELL_COMB_CHARS_LO && wc[0] <= CELL_COMB_CHARS_HI) {
                 const struct composed *composed =
                     composed_lookup(term->composed, wc[0] - CELL_COMB_CHARS_LO);
@@ -332,26 +343,26 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
                 wc_count = composed->count;
             }
 
+            /* Convert wide character to utf8 */
             for (size_t i = 0; i < wc_count; i++) {
                 char buf[16];
                 size_t char_len = c32rtomb(buf, wc[i], &ps);
+
                 if (char_len == (size_t)-1)
                     continue;
 
-                if (vline->len == 0 && char_len == 1 && buf[0] == 0)
-                    continue;
-
                 for (size_t j = 0; j < char_len; j++) {
-                    if (vline->len + char_len > vline->sz) {
-                        /* TODO: grow dynamically */
-                        size_t new_count = (vline->len + char_len) * 2;
-                        vline->utf8 = xreallocarray(vline->utf8, new_count, 1);
-                        vline->map = xreallocarray(vline->map, new_count, sizeof(vline->map[0]));
+                    const size_t requires_size = vline->len + char_len;
+
+                    if (requires_size > vline->sz) {
+                        const size_t new_size = requires_size * 2;
+                        vline->utf8 = xreallocarray(vline->utf8, new_size, 1);
+                        vline->map = xreallocarray(vline->map, new_size, sizeof(vline->map[0]));
+                        vline->sz = new_size;
                     }
 
                     vline->utf8[vline->len + j] = buf[j];
-                    vline->map[vline->len + j].col = c;
-                    vline->map[vline->len + j].row = row;
+                    vline->map[vline->len + j] = (struct coord){c, term->grid->view + r};
                 }
 
                 vline->len += char_len;
@@ -371,9 +382,9 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
 
     // https://gist.github.com/gruber/249502
     regex_t preg;
-    const char *foo =
+    const char *regex_string =
         "("
-            "[a-z][[:alpha:]-]+:"       // protocol
+            "[a-z][[:alnum:]-]+:"       // protocol
             "("
                 "/{1,3}|[a-z0-9%]"     // slashes (what's the OR part for?)
             ")"
@@ -390,291 +401,70 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
         "("
             "\\(([^[:space:]()<>]+|(\\([^[:space:]()<>]+\\)))*\\)"
             "|"
-        // TODO: figure out how to add \\] to the expression below...
-            "[^[:space:]`!()\\[{};:'\".,<>?«»“”‘’]"
+            "[^]\\[[:space:]`!(){};:'\".,<>?«»“”‘’]"
         ")"
     ;
 
-    LOG_ERR("foo=%s", foo);
-
-    int r = regcomp(&preg, foo, REG_EXTENDED);
+    int r = regcomp(&preg, regex_string, REG_EXTENDED);
 
     if (r != 0) {
         char err_buf[1024];
         regerror(r, &preg, err_buf, sizeof(err_buf));
-        LOG_ERR("regcomp: %s", err_buf);
-    } else {
-        size_t i = 0;
-        while (true) {
-            const struct vline *v = &vlines[i++];
-            if (v->utf8 == NULL)
-                break;
+        LOG_ERR("failed to compile regular expression: %s", err_buf);
 
-
-            regmatch_t matches[preg.re_nsub + 1];
-            r = regexec(&preg, v->utf8, preg.re_nsub + 1, matches, 0);
-
-            if (r == REG_NOMATCH)
-                continue;
-
-            size_t mlen = matches[0].rm_eo - matches[0].rm_so;
-            LOG_WARN("MATCH at %d: %.*s (%zu)", matches[0].rm_so, (int)mlen, &v->utf8[matches[0].rm_so], mlen);
+        for (size_t i = 0; i < ALEN(vlines); i++) {
+            const struct vline *v = &vlines[i];
+            free(v->utf8);
+            free(v->map);
         }
-        regfree(&preg);
+
+        return;
     }
 
-    size_t i = 0;
-    while (true) {
-        const struct vline *v = &vlines[i++];
+    for (size_t i = 0; i < ALEN(vlines); i++) {
+        const struct vline *v = &vlines[i];
         if (v->utf8 == NULL)
-            break;
+            continue;;
 
-        LOG_WARN("%.*s", (int)v->len, v->utf8);
+        const char *search_string = v->utf8;
+        while (true) {
+
+            regmatch_t matches[preg.re_nsub + 1];
+            r = regexec(&preg, search_string, preg.re_nsub + 1, matches, 0);
+
+            if (r == REG_NOMATCH)
+                break;
+
+            const size_t mlen = matches[0].rm_eo - matches[0].rm_so;
+            const size_t start = &search_string[matches[0].rm_so] - v->utf8;
+            const size_t end = start + mlen;
+
+            LOG_DBG(
+                "MATCH at %d: %.*s (%zu) row/col = %dx%d",
+                matches[0].rm_so, (int)mlen, &search_string[matches[0].rm_so],
+                mlen, v->map[start].row, v->map[start].col);
+
+            tll_push_back(
+                *urls,
+                ((struct url){
+                    .id = (uint64_t)rand() << 32 | rand(),
+                    .url = xstrndup(&v->utf8[start], mlen),
+                    .range = {
+                        .start = v->map[start],
+                        .end = v->map[end - 1], /* Inclusive */
+                    },
+                    .action = action,
+                    .osc8 = false}));
+
+            search_string += matches[0].rm_eo;
+        }
+
         free(v->utf8);
         free(v->map);
     }
+
+    regfree(&preg);
 }
-
-static int
-c32cmp_single(const void *_a, const void *_b)
-{
-    const char32_t *a = _a;
-    const char32_t *b = _b;
-    return *a - *b;
-}
-
-static void
-auto_detected(const struct terminal *term, enum url_action action,
-              url_list_t *urls)
-{
-    const struct config *conf = term->conf;
-
-    const char32_t *uri_characters = conf->url.uri_characters;
-    if (uri_characters == NULL)
-        return;
-
-    const size_t uri_characters_count = c32len(uri_characters);
-    if (uri_characters_count == 0)
-        return;
-
-    size_t max_prot_len = conf->url.max_prot_len;
-    char32_t proto_chars[max_prot_len];
-    struct coord proto_start[max_prot_len];
-    size_t proto_char_count = 0;
-
-    enum {
-        STATE_PROTOCOL,
-        STATE_URL,
-    } state = STATE_PROTOCOL;
-
-    struct coord start = {-1, -1};
-    char32_t url[term->cols * term->rows + 1];
-    size_t len = 0;
-
-    ssize_t parenthesis = 0;
-    ssize_t brackets = 0;
-    ssize_t ltgts = 0;
-
-    for (int r = 0; r < term->rows; r++) {
-        const struct row *row = grid_row_in_view(term->grid, r);
-
-        for (int c = 0; c < term->cols; c++) {
-            const struct cell *cell = &row->cells[c];
-
-            if (cell->wc >= CELL_SPACER)
-                continue;
-
-            const char32_t *wcs = NULL;
-            size_t wc_count = 0;
-
-            if (cell->wc >= CELL_COMB_CHARS_LO && cell->wc <= CELL_COMB_CHARS_HI) {
-                struct composed *composed =
-                    composed_lookup(term->composed, cell->wc - CELL_COMB_CHARS_LO);
-                wcs = composed->chars;
-                wc_count = composed->count;
-            } else {
-                wcs = &cell->wc;
-                wc_count = 1;
-            }
-
-            for (size_t w_idx = 0; w_idx < wc_count; w_idx++) {
-                char32_t wc = wcs[w_idx];
-
-                switch (state) {
-                case STATE_PROTOCOL:
-                  for (size_t i = 0; i < max_prot_len - 1; i++) {
-                    proto_chars[i] = proto_chars[i + 1];
-                    proto_start[i] = proto_start[i + 1];
-                  }
-
-                  if (proto_char_count >= max_prot_len)
-                    proto_char_count = max_prot_len - 1;
-
-                  proto_chars[max_prot_len - 1] = wc;
-                  proto_start[max_prot_len - 1] = (struct coord){c, r};
-                  proto_char_count++;
-
-                  for (size_t i = 0; i < conf->url.prot_count; i++) {
-                    size_t prot_len = c32len(conf->url.protocols[i]);
-
-                    if (proto_char_count < prot_len)
-                      continue;
-
-                    const char32_t *proto =
-                        &proto_chars[max_prot_len - prot_len];
-
-                    if (c32ncasecmp(conf->url.protocols[i], proto, prot_len) ==
-                        0) {
-                      state = STATE_URL;
-                      start = proto_start[max_prot_len - prot_len];
-
-                      c32ncpy(url, proto, prot_len);
-                      len = prot_len;
-
-                      parenthesis = brackets = ltgts = 0;
-                      break;
-                    }
-                  }
-                  break;
-
-                case STATE_URL: {
-                  const char32_t *match =
-                      bsearch(&wc, uri_characters, uri_characters_count,
-                              sizeof(uri_characters[0]), &c32cmp_single);
-
-                  bool emit_url = false;
-
-                  if (match == NULL) {
-                    /*
-                     * Character is not a valid URI character. Emit
-                     * the URL we've collected so far, *without*
-                     * including _this_ character.
-                     */
-                    emit_url = true;
-                  } else {
-                    xassert(*match == wc);
-
-                    switch (wc) {
-                    default:
-                      url[len++] = wc;
-                      break;
-
-                    case U'(':
-                      parenthesis++;
-                      url[len++] = wc;
-                      break;
-
-                    case U'[':
-                      brackets++;
-                      url[len++] = wc;
-                      break;
-
-                    case U'<':
-                      ltgts++;
-                      url[len++] = wc;
-                      break;
-
-                    case U')':
-                      if (--parenthesis < 0)
-                        emit_url = true;
-                      else
-                        url[len++] = wc;
-                      break;
-
-                    case U']':
-                      if (--brackets < 0)
-                        emit_url = true;
-                      else
-                        url[len++] = wc;
-                      break;
-
-                    case U'>':
-                      if (--ltgts < 0)
-                        emit_url = true;
-                      else
-                        url[len++] = wc;
-                      break;
-                    }
-                  }
-
-                  if (c >= term->cols - 1 && row->linebreak) {
-                    /*
-                     * Endpoint is inclusive, and we'll be subtracting
-                     * 1 from the column when emitting the URL.
-                     */
-                    c++;
-                    emit_url = true;
-                  }
-
-                  if (emit_url) {
-                    struct coord end = {c, r};
-
-                    if (--end.col < 0) {
-                      end.row--;
-                      end.col = term->cols - 1;
-                    }
-
-                    /* Heuristic to remove trailing characters that
-                     * are valid URL characters, but typically not at
-                     * the end of the URL */
-                    bool done = false;
-                    do {
-                      switch (url[len - 1]) {
-                      case U'.':
-                      case U',':
-                      case U':':
-                      case U';':
-                      case U'?':
-                      case U'!':
-                      case U'"':
-                      case U'\'':
-                      case U'%':
-                        len--;
-                        end.col--;
-                        if (end.col < 0) {
-                          end.row--;
-                          end.col = term->cols - 1;
-                        }
-                        break;
-
-                      default:
-                        done = true;
-                        break;
-                      }
-                    } while (!done);
-
-                    url[len] = U'\0';
-
-                    start.row += term->grid->view;
-                    end.row += term->grid->view;
-
-                    char *url_utf8 = ac32tombs(url);
-                    if (url_utf8 != NULL) {
-                      tll_push_back(
-                          *urls,
-                          ((struct url){.id = (uint64_t)rand() << 32 | rand(),
-                                        .url = url_utf8,
-                                        .range =
-                                            {
-                                                .start = start,
-                                                .end = end,
-                                            },
-                                        .action = action,
-                                        .osc8 = false}));
-                    }
-
-                    state = STATE_PROTOCOL;
-                    len = 0;
-                    parenthesis = brackets = ltgts = 0;
-                  }
-                  break;
-                }
-                }
-            }
-        }
-    }
-}
-
 static void
 osc8_uris(const struct terminal *term, enum url_action action, url_list_t *urls)
 {
@@ -777,7 +567,6 @@ urls_collect(const struct terminal *term, enum url_action action, url_list_t *ur
 {
     xassert(tll_length(term->urls) == 0);
     osc8_uris(term, action, urls);
-    auto_detected(term, action, urls);
     regex_detected(term, action, urls);
     remove_overlapping(urls, term->grid->num_cols);
 }
