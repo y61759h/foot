@@ -91,6 +91,8 @@
   space inserted at the end of the current line.
 * Wrong key bindings executed when using alternative keyboard layouts
   ([#1929][1929]).
+* Foot not closing file descriptors for unrecognized or `no_keymap`
+  keymaps.
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 [1929]: https://codeberg.org/dnkl/foot/issues/1929

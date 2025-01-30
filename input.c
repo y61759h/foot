@@ -527,6 +527,7 @@ keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
     /* Verify keymap is in a format we understand */
     switch ((enum wl_keyboard_keymap_format)format) {
     case WL_KEYBOARD_KEYMAP_FORMAT_NO_KEYMAP:
+        close(fd);
         return;
 
     case WL_KEYBOARD_KEYMAP_FORMAT_XKB_V1:
@@ -534,6 +535,7 @@ keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
 
     default:
         LOG_WARN("unrecognized keymap format: %u", format);
+        close(fd);
         return;
     }
 
