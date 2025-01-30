@@ -380,7 +380,11 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
         }
     }
 
-    // https://gist.github.com/gruber/249502
+    /*
+     * Based on https://gist.github.com/gruber/249502, but modified:
+     *  - Do not allow {} at all
+     *  - Do allow matched []
+     */
     regex_t preg;
     const char *regex_string =
         "("
