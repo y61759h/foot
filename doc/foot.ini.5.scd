@@ -782,19 +782,6 @@ xdgtoken=95ebdfe56e4f47ddb5bba9d7dc3a2c35
 	
 	Default: _sadfjklewcmpgh_.
 
-*protocols*
-	Comma separated list of protocols (schemes) that should be
-	recognized in URL mode. Note that only auto-detected URLs are
-	affected by this option. OSC-8 URLs are always enabled, regardless
-	of protocol. Default: _http, https, ftp, ftps, file, gemini,
-	gopher, irc, ircs_.
-
-*uri-characters*
-	Set of characters allowed in auto-detected URLs. Any character not
-	included in this set constitutes a URL delimiter.
-	
-	Default:
-	_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-\_.,~:;/?#@!$&%\*+="'()[]_
 
 # SECTION: cursor
 

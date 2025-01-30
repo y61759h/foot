@@ -72,12 +72,19 @@
 * Do not try to set a zero width, or height, if the compositor sends a
   _configure_ event with only one dimension being zero
   ([#1925][1925]).
+* Auto-detection of URLs (i.e. not OSC-8 based URLs) are now regex
+  based.
 
 [1925]: https://codeberg.org/dnkl/foot/issues/1925
 
 
 ### Deprecated
 ### Removed
+
+* `url.uri-characters` and `url.protocols`. Both options have been
+  replaced by `url.regex`.
+
+
 ### Fixed
 
 * Kitty keyboard protocol: alternate key reporting failing to report

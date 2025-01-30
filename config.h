@@ -219,11 +219,6 @@ struct config {
             OSC8_UNDERLINE_URL_MODE,
             OSC8_UNDERLINE_ALWAYS,
         } osc8_underline;
-
-        char32_t **protocols;
-        char32_t *uri_characters;
-        size_t prot_count;
-        size_t max_prot_len;
     } url;
 
     struct {

@@ -420,14 +420,6 @@ done:
     return ret;
 }
 
-static int
-c32cmp_single(const void *_a, const void *_b)
-{
-    const char32_t *a = _a;
-    const char32_t *b = _b;
-    return *a - *b;
-}
-
 static bool
 str_has_prefix(const char *str, const char *prefix)
 {
@@ -1225,7 +1217,6 @@ parse_section_url(struct context *ctx)
 {
     struct config *conf = ctx->conf;
     const char *key = ctx->key;
-    const char *value = ctx->value;
 
     if (streq(key, "launch"))
         return value_to_spawn_template(ctx, &conf->url.launch);
@@ -1241,70 +1232,6 @@ parse_section_url(struct context *ctx)
             ctx,
             (const char *[]){"url-mode", "always", NULL},
             (int *)&conf->url.osc8_underline);
-    }
-
-    else if (streq(key, "protocols")) {
-        for (size_t i = 0; i < conf->url.prot_count; i++)
-            free(conf->url.protocols[i]);
-        free(conf->url.protocols);
-
-        conf->url.max_prot_len = 0;
-        conf->url.prot_count = 0;
-        conf->url.protocols = NULL;
-
-        char *copy = xstrdup(value);
-
-        for (char *prot = strtok(copy, ",");
-             prot != NULL;
-             prot = strtok(NULL, ","))
-        {
-
-            /* Strip leading whitespace */
-            while (isspace(prot[0]))
-                prot++;
-
-            /* Strip trailing whitespace */
-            size_t len = strlen(prot);
-            while (isspace(prot[len - 1]))
-                len--;
-            prot[len] = '\0';
-
-            size_t chars = mbsntoc32(NULL, prot, len, 0);
-            if (chars == (size_t)-1) {
-                ctx->value = prot;
-                LOG_CONTEXTUAL_ERRNO("invalid protocol");
-                return false;
-            }
-
-            conf->url.prot_count++;
-            conf->url.protocols = xrealloc(
-                conf->url.protocols,
-                conf->url.prot_count * sizeof(conf->url.protocols[0]));
-
-            size_t idx = conf->url.prot_count - 1;
-            conf->url.protocols[idx] = xmalloc((chars + 1 + 3) * sizeof(char32_t));
-            mbsntoc32(conf->url.protocols[idx], prot, len, chars + 1);
-            c32cpy(&conf->url.protocols[idx][chars], U"://");
-
-            chars += 3;  /* Include the "://" */
-            if (chars > conf->url.max_prot_len)
-                conf->url.max_prot_len = chars;
-        }
-
-        free(copy);
-        return true;
-    }
-
-    else if (streq(key, "uri-characters")) {
-        if (!value_to_wchars(ctx, &conf->url.uri_characters))
-            return false;
-
-        qsort(
-            conf->url.uri_characters,
-            c32len(conf->url.uri_characters),
-            sizeof(conf->url.uri_characters[0]),
-            &c32cmp_single);
-        return true;
     }
 
     else {
@@ -3196,7 +3123,6 @@ config_load(struct config *conf, const char *conf_path,
         },
         .url = {
             .label_letters = xc32dup(U"sadfjklewcmpgh"),
-            .uri_characters = xc32dup(U"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.,~:;/?#@!$&%*+=\"'()[]"),
             .osc8_underline = OSC8_UNDERLINE_URL_MODE,
         },
         .can_shape_grapheme = fcft_caps & FCFT_CAPABILITY_GRAPHEME_SHAPING,
@@ -3315,34 +3241,6 @@ config_load(struct config *conf, const char *conf_path,
     tokenize_cmdline("--action ${action-name}=${action-label}", &conf->desktop_notifications.command_action_arg.argv.args);
     tokenize_cmdline("xdg-open ${url}", &conf->url.launch.argv.args);
 
-    static const char32_t *url_protocols[] = {
-        U"http://",
-        U"https://",
-        U"ftp://",
-        U"ftps://",
-        U"file://",
-        U"gemini://",
-        U"gopher://",
-        U"irc://",
-        U"ircs://",
-    };
-    conf->url.protocols = xmalloc(
-        ALEN(url_protocols) * sizeof(conf->url.protocols[0]));
-    conf->url.prot_count = ALEN(url_protocols);
-    conf->url.max_prot_len = 0;
-
-    for (size_t i = 0; i < ALEN(url_protocols); i++) {
-        size_t len = c32len(url_protocols[i]);
-        if (len > conf->url.max_prot_len)
-            conf->url.max_prot_len = len;
-        conf->url.protocols[i] = xc32dup(url_protocols[i]);
-    }
-
-    qsort(
-        conf->url.uri_characters,
-        c32len(conf->url.uri_characters),
-        sizeof(conf->url.uri_characters[0]),
-        &c32cmp_single);
 
     tll_foreach(*initial_user_notifications, it) {
         tll_push_back(conf->notifications, it->item);
@@ -3577,12 +3475,7 @@ config_clone(const struct config *old)
     config_font_list_clone(&conf->csd.font, &old->csd.font);
 
     conf->url.label_letters = xc32dup(old->url.label_letters);
-    conf->url.uri_characters = xc32dup(old->url.uri_characters);
     spawn_template_clone(&conf->url.launch, &old->url.launch);
-    conf->url.protocols = xmalloc(
-        old->url.prot_count * sizeof(conf->url.protocols[0]));
-    for (size_t i = 0; i < old->url.prot_count; i++)
-        conf->url.protocols[i] = xc32dup(old->url.protocols[i]);
 
     key_binding_list_clone(&conf->bindings.key, &old->bindings.key);
     key_binding_list_clone(&conf->bindings.search, &old->bindings.search);
@@ -3663,10 +3556,6 @@ config_free(struct config *conf)
 
     free(conf->url.label_letters);
     spawn_template_free(&conf->url.launch);
-    for (size_t i = 0; i < conf->url.prot_count; i++)
-        free(conf->url.protocols[i]);
-    free(conf->url.protocols);
-    free(conf->url.uri_characters);
 
     free_key_binding_list(&conf->bindings.key);
     free_key_binding_list(&conf->bindings.search);
