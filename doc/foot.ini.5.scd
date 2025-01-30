@@ -786,7 +786,7 @@ xdgtoken=95ebdfe56e4f47ddb5bba9d7dc3a2c35
 	URL regex to use when auto-detecting URLs. The format is
 	"POSIX-Extended Regular Expressions".
 	
-	Default: _TODO_
+	Default: _([a-z][[:alnum:]-]+:(/{1,3}|[a-z0-9%])|www[:digit:]{0,3}[.])([^[:space:](){}<>]+|\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\])+(\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\]|[^]\[[:space:]`!(){};:'".,<>?«»“”‘’])_
 
 # SECTION: cursor
 

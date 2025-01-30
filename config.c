@@ -1239,6 +1239,7 @@ parse_section_url(struct context *ctx)
         regex_t preg;
 
         int r = regcomp(&preg, regex, REG_EXTENDED);
+
         if (r != 0) {
             char err_buf[128];
             regerror(r, &preg, err_buf, sizeof(err_buf));
