@@ -3006,7 +3006,9 @@ add_default_key_bindings(struct config *conf)
 {
     const struct config_key_binding bindings[] = {
         {BIND_ACTION_SCROLLBACK_UP_PAGE, m(XKB_MOD_NAME_SHIFT), {{XKB_KEY_Prior}}},
+        {BIND_ACTION_SCROLLBACK_UP_PAGE, m(XKB_MOD_NAME_SHIFT), {{XKB_KEY_KP_Prior}}},
         {BIND_ACTION_SCROLLBACK_DOWN_PAGE, m(XKB_MOD_NAME_SHIFT), {{XKB_KEY_Next}}},
+        {BIND_ACTION_SCROLLBACK_DOWN_PAGE, m(XKB_MOD_NAME_SHIFT), {{XKB_KEY_KP_Next}}},
         {BIND_ACTION_CLIPBOARD_COPY, m(XKB_MOD_NAME_CTRL "+" XKB_MOD_NAME_SHIFT), {{XKB_KEY_c}}},
         {BIND_ACTION_CLIPBOARD_COPY, m("none"), {{XKB_KEY_XF86Copy}}},
         {BIND_ACTION_CLIPBOARD_PASTE, m(XKB_MOD_NAME_CTRL "+" XKB_MOD_NAME_SHIFT), {{XKB_KEY_v}}},
@@ -3037,11 +3039,14 @@ add_default_search_bindings(struct config *conf)
 {
     const struct config_key_binding bindings[] = {
         {BIND_ACTION_SEARCH_SCROLLBACK_UP_PAGE, m(XKB_MOD_NAME_SHIFT), {{XKB_KEY_Prior}}},
+        {BIND_ACTION_SEARCH_SCROLLBACK_UP_PAGE, m(XKB_MOD_NAME_SHIFT), {{XKB_KEY_KP_Prior}}},
         {BIND_ACTION_SEARCH_SCROLLBACK_DOWN_PAGE, m(XKB_MOD_NAME_SHIFT), {{XKB_KEY_Next}}},
+        {BIND_ACTION_SEARCH_SCROLLBACK_DOWN_PAGE, m(XKB_MOD_NAME_SHIFT), {{XKB_KEY_KP_Next}}},
         {BIND_ACTION_SEARCH_CANCEL, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_c}}},
         {BIND_ACTION_SEARCH_CANCEL, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_g}}},
         {BIND_ACTION_SEARCH_CANCEL, m("none"), {{XKB_KEY_Escape}}},
         {BIND_ACTION_SEARCH_COMMIT, m("none"), {{XKB_KEY_Return}}},
+        {BIND_ACTION_SEARCH_COMMIT, m("none"), {{XKB_KEY_KP_Enter}}},
         {BIND_ACTION_SEARCH_FIND_PREV, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_r}}},
         {BIND_ACTION_SEARCH_FIND_NEXT, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_s}}},
         {BIND_ACTION_SEARCH_EDIT_LEFT, m("none"), {{XKB_KEY_Left}}},

@@ -1136,7 +1136,8 @@ e.g. *search-start=none*.
 	application. Default: _none_.
 
 *scrollback-up-page*
-	Scrolls up/back one page in history. Default: _Shift+Page\_Up_.
+	Scrolls up/back one page in history. Default: _Shift+Page\_Up
+	Shift+KP\_Page\_Up_.
 
 *scrollback-up-half-page*
 	Scrolls up/back half of a page in history. Default: _none_.
@@ -1146,7 +1147,7 @@ e.g. *search-start=none*.
 
 *scrollback-down-page*
 	Scroll down/forward one page in history. Default:
-	_Shift+Page\_Down_.
+	_Shift+Page\_Down Shift+KP\_Page\_Down_.
 
 *scrollback-down-half-page*
 	Scroll down/forward half of a page in history. Default: _none_.
@@ -1288,7 +1289,8 @@ scrollback search mode. The syntax is exactly the same as the regular
 *commit*
 	Exit search mode and copy current selection into the _primary
 	selection_. Viewport is **not** restored. To copy the selection to
-	the regular _clipboard_, use *Control+Shift+c*. Default: _Return_.
+	the regular _clipboard_, use *Control+Shift+c*. Default: _Return
+	KP_Enter_.
 
 *find-prev*
 	Search **backwards** in the scrollback history for the next
@@ -1379,7 +1381,8 @@ scrollback search mode. The syntax is exactly the same as the regular
 	details. Default: _none_.
 
 *scrollback-up-page*
-	Scrolls up/back one page in history. Default: _Shift+Page\_Up_.
+	Scrolls up/back one page in history. Default: _Shift+Page\_Up
+	Shift+KP\_Page\_Up_.
 
 *scrollback-up-half-page*
 	Scrolls up/back half of a page in history. Default: _none_.
@@ -1389,7 +1392,7 @@ scrollback search mode. The syntax is exactly the same as the regular
 
 *scrollback-down-page*
 	Scroll down/forward one page in history. Default:
-	_Shift+Page\_Down_.
+	_Shift+Page\_Down Shift+KP\_Page\_Down_.
 
 *scrollback-down-half-page*
 	Scroll down/forward half of a page in history. Default: _none_.
