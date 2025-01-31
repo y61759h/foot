@@ -1600,7 +1600,7 @@ key_press_release(struct seat *seat, struct terminal *term, uint32_t serial,
         tll_foreach(bindings->key, it) {
             const struct key_binding *bind = &it->item;
 
-            if (bind->mods != mods)
+            if (bind->mods != mods || bind->mods == 0)
                 continue;
 
             for (size_t i = 0; i < raw_count; i++) {
@@ -1616,7 +1616,7 @@ key_press_release(struct seat *seat, struct terminal *term, uint32_t serial,
         tll_foreach(bindings->key, it) {
             const struct key_binding *bind = &it->item;
 
-            if (bind->mods != mods)
+            if (bind->mods != mods || bind->mods == 0)
                 continue;
 
             tll_foreach(bind->k.key_codes, code) {

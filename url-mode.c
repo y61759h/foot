@@ -198,7 +198,7 @@ urls_input(struct seat *seat, struct terminal *term,
     /* Match untranslated symbols */
     tll_foreach(bindings->url, it) {
         const struct key_binding *bind = &it->item;
-        if (bind->mods != mods)
+        if (bind->mods != mods || bind->mods == 0)
             continue;
 
         for (size_t i = 0; i < raw_count; i++) {
@@ -212,7 +212,7 @@ urls_input(struct seat *seat, struct terminal *term,
     /* Match raw key code */
     tll_foreach(bindings->url, it) {
         const struct key_binding *bind = &it->item;
-        if (bind->mods != mods)
+        if (bind->mods != mods || bind->mods == 0)
             continue;
 
         /* Match raw key code */
