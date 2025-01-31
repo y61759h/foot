@@ -1392,23 +1392,6 @@ search_input(struct seat *seat, struct terminal *term,
      * Key bindings
      */
 
-    /* Match translated symbol */
-    tll_foreach(bindings->search, it) {
-        const struct key_binding *bind = &it->item;
-
-        if (bind->k.sym == sym &&
-            bind->mods == (mods & ~consumed)) {
-
-            if (execute_binding(seat, term, bind, serial,
-                                &update_search_result, &search_direction,
-                                &redraw))
-            {
-                goto update_search;
-            }
-            return;
-        }
-    }
-
     /* Match untranslated symbols */
     tll_foreach(bindings->search, it) {
         const struct key_binding *bind = &it->item;
@@ -1426,6 +1409,23 @@ search_input(struct seat *seat, struct terminal *term,
                 }
                 return;
             }
+        }
+    }
+
+    /* Match translated symbol */
+    tll_foreach(bindings->search, it) {
+        const struct key_binding *bind = &it->item;
+
+        if (bind->k.sym == sym &&
+            bind->mods == (mods & ~consumed)) {
+
+            if (execute_binding(seat, term, bind, serial,
+                                &update_search_result, &search_direction,
+                                &redraw))
+            {
+                goto update_search;
+            }
+            return;
         }
     }
 

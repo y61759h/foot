@@ -182,19 +182,6 @@ urls_input(struct seat *seat, struct terminal *term,
      * Key bindings
      */
 
-    /* Match translated symbol */
-    tll_foreach(bindings->url, it) {
-        const struct key_binding *bind = &it->item;
-
-        if (bind->k.sym == sym &&
-            bind->mods == (mods & ~consumed))
-        {
-            execute_binding(seat, term, bind, serial);
-            return;
-        }
-
-    }
-
     /* Match untranslated symbols */
     tll_foreach(bindings->url, it) {
         const struct key_binding *bind = &it->item;
@@ -207,6 +194,19 @@ urls_input(struct seat *seat, struct terminal *term,
                 return;
             }
         }
+    }
+
+    /* Match translated symbol */
+    tll_foreach(bindings->url, it) {
+        const struct key_binding *bind = &it->item;
+
+        if (bind->k.sym == sym &&
+            bind->mods == (mods & ~consumed))
+        {
+            execute_binding(seat, term, bind, serial);
+            return;
+        }
+
     }
 
     /* Match raw key code */
