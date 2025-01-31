@@ -354,7 +354,8 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
                 for (size_t j = 0; j < char_len; j++) {
                     const size_t requires_size = vline->len + char_len;
 
-                    if (requires_size > vline->sz) {
+                    /* Need to grow? Remember to save at least one byte for terminator */
+                    if (vline->sz == 0 || requires_size > vline->sz - 1) {
                         const size_t new_size = requires_size * 2;
                         vline->utf8 = xreallocarray(vline->utf8, new_size, 1);
                         vline->map = xreallocarray(vline->map, new_size, sizeof(vline->map[0]));
