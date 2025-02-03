@@ -1222,6 +1222,7 @@ kitty_text_size(struct terminal *term, char *string)
     LOG_DBG("len=%zu, forced=%d, calculated=%zu, using=%zu",
             len, forced_width, calculated_width, width);
 
+#if 0
     if (len == 1 && calculated_width == forced_width) {
         /*
          * Optimization: if there's a single codepoint, and either
@@ -1233,6 +1234,7 @@ kitty_text_size(struct terminal *term, char *string)
         free(wchars);
         return;
     }
+#endif
 
     uint32_t key = composed_key_from_chars(wchars, len);
 
