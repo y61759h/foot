@@ -3570,8 +3570,6 @@ config_override_apply(struct config *conf, config_override_t *overrides,
             continue;
         }
 
-        LOG_ERR("section-name=%s", section_name);
-
         char *maybe_section_suffix = NULL;
         enum section section = str_to_section(section_name, &maybe_section_suffix);
 
