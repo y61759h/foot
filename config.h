@@ -61,6 +61,7 @@ enum binding_aux_type {
     BINDING_AUX_NONE,
     BINDING_AUX_PIPE,
     BINDING_AUX_TEXT,
+    BINDING_AUX_REGEX,
 };
 
 struct binding_aux {
@@ -74,6 +75,8 @@ struct binding_aux {
             uint8_t *data;
             size_t len;
         } text;
+
+        char *regex_name;
     };
 };
 
@@ -120,6 +123,13 @@ struct env_var {
     char *value;
 };
 typedef tll(struct env_var) env_var_list_t;
+
+struct custom_regex {
+    char *name;
+    char *regex;
+    regex_t preg;
+    struct config_spawn_template launch;
+};
 
 struct config {
     char *term;
@@ -224,6 +234,8 @@ struct config {
         char *regex;
         regex_t preg;
     } url;
+
+    tll(struct custom_regex) custom_regexes;
 
     struct {
         uint32_t fg;

@@ -789,6 +789,7 @@ struct terminal {
     bool urls_show_uri_on_jump_label;
     struct grid *url_grid_snapshot;
     bool ime_reenable_after_url_mode;
+    const struct config_spawn_template *url_launch;
 
 #if defined(FOOT_IME_ENABLED) && FOOT_IME_ENABLED
     bool ime_enabled;

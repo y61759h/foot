@@ -67,12 +67,13 @@ spawn_url_launcher_with_token(struct terminal *term,
         return false;
     }
 
+    xassert(term->url_launch != NULL);
     bool ret = false;
 
     if (spawn_expand_template(
-            &term->conf->url.launch, 1,
-            (const char *[]){"url"},
-            (const char *[]){url},
+            term->url_launch, 2,
+            (const char *[]){"url", "match"},
+            (const char *[]){url, url},
             &argc, &argv))
     {
         ret = spawn(
@@ -83,6 +84,8 @@ spawn_url_launcher_with_token(struct terminal *term,
             free(argv[i]);
         free(argv);
     }
+
+    term->url_launch = NULL;
 
     close(dev_null);
     return ret;
@@ -107,6 +110,8 @@ static bool
 spawn_url_launcher(struct seat *seat, struct terminal *term, const char *url,
                    uint32_t serial)
 {
+    xassert(term->url_launch != NULL);
+
     struct spawn_activation_context *ctx = xmalloc(sizeof(*ctx));
     *ctx = (struct spawn_activation_context){
         .term = term,
@@ -300,7 +305,8 @@ struct vline {
 };
 
 static void
-regex_detected(const struct terminal *term, enum url_action action, url_list_t *urls)
+regex_detected(const struct terminal *term, enum url_action action,
+               const regex_t *preg, url_list_t *urls)
 {
     /*
      * Use regcomp()+regexec() to find patterns.
@@ -380,8 +386,6 @@ regex_detected(const struct terminal *term, enum url_action action, url_list_t *
             }
         }
     }
-
-    const regex_t *preg = &term->conf->url.preg;
 
     for (size_t i = 0; i < ALEN(vlines); i++) {
         const struct vline *v = &vlines[i];
@@ -523,11 +527,13 @@ remove_overlapping(url_list_t *urls, int cols)
 }
 
 void
-urls_collect(const struct terminal *term, enum url_action action, url_list_t *urls)
+urls_collect(const struct terminal *term, enum url_action action,
+             const regex_t *preg, bool osc8, url_list_t *urls)
 {
     xassert(tll_length(term->urls) == 0);
-    osc8_uris(term, action, urls);
-    regex_detected(term, action, urls);
+    if (osc8)
+        osc8_uris(term, action, urls);
+    regex_detected(term, action, preg, urls);
     remove_overlapping(urls, term->grid->num_cols);
 }
 
@@ -710,7 +716,7 @@ tag_cells_for_url(struct terminal *term, const struct url *url, bool value)
 }
 
 void
-urls_render(struct terminal *term)
+urls_render(struct terminal *term, const struct config_spawn_template *launch)
 {
     struct wl_window *win = term->window;
 
@@ -744,6 +750,9 @@ urls_render(struct terminal *term)
 
     /* Snapshot the current grid */
     term->url_grid_snapshot = grid_snapshot(term->grid);
+
+    /* Remember which launcher to use */
+    term->url_launch = launch;
 
     xassert(tll_length(win->urls) == 0);
     tll_foreach(win->term->urls, it) {

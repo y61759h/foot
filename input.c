@@ -349,9 +349,9 @@ execute_binding(struct seat *seat, struct terminal *term,
             action == BIND_ACTION_SHOW_URLS_LAUNCH ? URL_ACTION_LAUNCH :
             URL_ACTION_PERSISTENT;
 
-        urls_collect(term, url_action, &term->urls);
+        urls_collect(term, url_action, &term->conf->url.preg, true, &term->urls);
         urls_assign_key_combos(term->conf, &term->urls);
-        urls_render(term);
+        urls_render(term, &term->conf->url.launch);
         return true;
     }
 
@@ -446,6 +446,42 @@ execute_binding(struct seat *seat, struct terminal *term,
 
     case BIND_ACTION_QUIT:
         term_shutdown(term);
+        return true;
+
+    case BIND_ACTION_REGEX_LAUNCH:
+    case BIND_ACTION_REGEX_COPY:
+        if (binding->aux->type != BINDING_AUX_REGEX)
+            return true;
+
+        tll_foreach(term->conf->custom_regexes, it) {
+            const struct custom_regex *regex = &it->item;
+
+            if (streq(regex->name, binding->aux->regex_name)) {
+                xassert(!urls_mode_is_active(term));
+
+                enum url_action url_action = action == BIND_ACTION_REGEX_LAUNCH
+                    ? URL_ACTION_LAUNCH : URL_ACTION_COPY;
+
+                if (regex->regex == NULL) {
+                    LOG_ERR("regex:%s has no regex defined", regex->name);
+                    return true;
+                }
+                if (url_action == URL_ACTION_LAUNCH && regex->launch.argv.args == NULL) {
+                    LOG_ERR("regex:%s has no launch command defined", regex->name);
+                    return true;
+                }
+
+                urls_collect(term, url_action, &regex->preg, false, &term->urls);
+                urls_assign_key_combos(term->conf, &term->urls);
+                urls_render(term, &regex->launch);
+                return true;
+            }
+        }
+
+        LOG_ERR(
+            "no regex section named '%s' defined in the configuration",
+            binding->aux->regex_name);
+
         return true;
 
     case BIND_ACTION_SELECT_BEGIN:

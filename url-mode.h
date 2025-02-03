@@ -14,10 +14,11 @@ static inline bool urls_mode_is_active(const struct terminal *term)
 }
 
 void urls_collect(
-    const struct terminal *term, enum url_action action, url_list_t *urls);
+    const struct terminal *term, enum url_action action, const regex_t *preg,
+    bool osc8, url_list_t *urls);
 void urls_assign_key_combos(const struct config *conf, url_list_t *urls);
 
-void urls_render(struct terminal *term);
+void urls_render(struct terminal *term, const struct config_spawn_template *launch);
 void urls_reset(struct terminal *term);
 
 void urls_input(struct seat *seat, struct terminal *term,
