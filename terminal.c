@@ -4255,7 +4255,7 @@ term_process_and_print_non_ascii(struct terminal *term, char32_t wc)
             new_cc->count = wanted_count;
             new_cc->chars[0] = base;
             new_cc->chars[wanted_count - 1] = wc;
-            new_cc->forced_width = 0;
+            new_cc->forced_width = composed != NULL ? composed->forced_width : 0;
 
             if (composed != NULL) {
                 memcpy(&new_cc->chars[1], &composed->chars[1],
@@ -4313,7 +4313,7 @@ term_process_and_print_non_ascii(struct terminal *term, char32_t wc)
             composed_insert(&term->composed, new_cc);
 
             wc = CELL_COMB_CHARS_LO + new_cc->key;
-            width = new_cc->width;
+            width = new_cc->forced_width > 0 ? new_cc->forced_width : new_cc->width;
 
             xassert(wc >= CELL_COMB_CHARS_LO);
             xassert(wc <= CELL_COMB_CHARS_HI);
