@@ -1256,6 +1256,12 @@ parse_section_url(struct context *ctx)
             return false;
         }
 
+        if (preg.re_nsub == 0) {
+            LOG_CONTEXTUAL_ERR("invalid regex: no marked subexpression(s)");
+            regfree(&preg);
+            return false;
+        }
+
         regfree(&conf->url.preg);
         free(conf->url.regex);
 
@@ -1297,6 +1303,12 @@ parse_section_regex(struct context *ctx)
             char err_buf[128];
             regerror(r, &preg, err_buf, sizeof(err_buf));
             LOG_CONTEXTUAL_ERR("invalid regex: %s", err_buf);
+            return false;
+        }
+
+        if (preg.re_nsub == 0) {
+            LOG_CONTEXTUAL_ERR("invalid regex: no marked subexpression(s)");
+            regfree(&preg);
             return false;
         }
 
@@ -3426,33 +3438,37 @@ config_load(struct config *conf, const char *conf_path,
          */
         const char *url_regex_string =
             "("
-                "[a-z][[:alnum:]-]+:"       // protocol
                 "("
-                    "/{1,3}|[a-z0-9%]"     // slashes (what's the OR part for?)
+                    "[a-z][[:alnum:]-]+:"       // protocol
+                    "("
+                        "/{1,3}|[a-z0-9%]"     // slashes (what's the OR part for?)
+                    ")"
+                    "|"
+                    "www[:digit:]{0,3}[.]"
+                    //"|"
+                    //"[a-z0-9.\\-]+[.][a-z]{2,4}/"  /* "looks like domain name followed by a slash" - remove? */
                 ")"
-                "|"
-                "www[:digit:]{0,3}[.]"
-                //"|"
-                //"[a-z0-9.\\-]+[.][a-z]{2,4}/"  /* "looks like domain name followed by a slash" - remove? */
-            ")"
-            "("
-                "[^[:space:](){}<>]+"
-                "|"
-                "\\(([^[:space:](){}<>]+|(\\([^[:space:](){}<>]+\\)))*\\)"
-                "|"
-                "\\[([^]\\[[:space:](){}<>]+|(\\[[^]\\[[:space:](){}<>]+\\]))*\\]"
-            ")+"
-            "("
-                "\\(([^[:space:](){}<>]+|(\\([^[:space:](){}<>]+\\)))*\\)"
-                "|"
-                "\\[([^]\\[[:space:](){}<>]+|(\\[[^]\\[[:space:](){}<>]+\\]))*\\]"
-                "|"
-                "[^]\\[[:space:]`!(){};:'\".,<>?«»“”‘’]"
+                "("
+                    "[^[:space:](){}<>]+"
+                    "|"
+                    "\\(([^[:space:](){}<>]+|(\\([^[:space:](){}<>]+\\)))*\\)"
+                    "|"
+                    "\\[([^]\\[[:space:](){}<>]+|(\\[[^]\\[[:space:](){}<>]+\\]))*\\]"
+                ")+"
+                "("
+                    "\\(([^[:space:](){}<>]+|(\\([^[:space:](){}<>]+\\)))*\\)"
+                    "|"
+                    "\\[([^]\\[[:space:](){}<>]+|(\\[[^]\\[[:space:](){}<>]+\\]))*\\]"
+                    "|"
+                    "[^]\\[[:space:]`!(){};:'\".,<>?«»“”‘’]"
+                ")"
             ")"
         ;
+
         int r = regcomp(&conf->url.preg, url_regex_string, REG_EXTENDED);
         xassert(r == 0);
         conf->url.regex = xstrdup(url_regex_string);
+        xassert(conf->url.preg.re_nsub >= 1);
     }
 
     tll_foreach(*initial_user_notifications, it) {

@@ -400,13 +400,13 @@ regex_detected(const struct terminal *term, enum url_action action,
             if (r == REG_NOMATCH)
                 break;
 
-            const size_t mlen = matches[0].rm_eo - matches[0].rm_so;
-            const size_t start = &search_string[matches[0].rm_so] - v->utf8;
+            const size_t mlen = matches[1].rm_eo - matches[1].rm_so;
+            const size_t start = &search_string[matches[1].rm_so] - v->utf8;
             const size_t end = start + mlen;
 
             LOG_DBG(
                 "regex match at row %d: %.*srow/col = %dx%d",
-                matches[0].rm_so, (int)mlen, &search_string[matches[0].rm_so],
+                matches[1].rm_so, (int)mlen, &search_string[matches[1].rm_so],
                 v->map[start].row, v->map[start].col);
 
             tll_push_back(

@@ -786,11 +786,13 @@ section.
 	Default: _sadfjklewcmpgh_.
 
 *regex*
-
 	Regular expression to use when auto-detecting URLs. The format is
-	"POSIX-Extended Regular Expressions".
+	"POSIX-Extended Regular Expressions". Note that the first marked
+	subexpression is used a the URL. In other words, if you want the
+	whole regex matćh to be used as an URL, surround all of it with
+	parenthesis: *(regex-pattern)*.
 	
-	Default: _([a-z][[:alnum:]-]+:(/{1,3}|[a-z0-9%])|www[:digit:]{0,3}[.])([^[:space:](){}<>]+|\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\])+(\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\]|[^]\[[:space:]`!(){};:'".,<>?«»“”‘’])_
+	Default: _(([a-z][[:alnum:]-]+:(/{1,3}|[a-z0-9%])|www[:digit:]{0,3}[.])([^[:space:](){}<>]+|\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\])+(\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\]|[^]\[[:space:]`!(){};:'".,<>?«»“”‘’]))_
 
 # SECTION: regex
 
@@ -817,7 +819,12 @@ regex-copy=[foo] Control+Mod1+Shift+q
 
 *regex*
 	Regular expression to use when matching text. The format is
-	"POSIX-Extended Regular Expressions". Default: _not set_.
+	"POSIX-Extended Regular Expressions". Note that the first marked
+	subexpression is used a the URL. In other words, if you want the
+	whole regex matćh to be used as an URL, surround all of it with
+	parenthesis: *(regex-pattern)*.
+	
+	Default: _not set_.
 
 
 # SECTION: cursor
