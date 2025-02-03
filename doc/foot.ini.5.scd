@@ -806,7 +806,7 @@ for details. In short, you need to:
 ```
 [regex:foo]
 regex=foo(bar)?
-launch=path-to-script-or-application {match}
+launch=path-to-script-or-application ${match}
 
 [key-bindings]
 regex-launch=[foo] Control+Shift+q
@@ -1280,7 +1280,7 @@ e.g. *search-start=none*.
 	```
 	[regex:foo]
 	regex=foo(bar)?
-	launch=path-to-script-or-application {match}
+	launch=path-to-script-or-application ${match}
 	
 	[key-bindings]
 	regex-launch=[foo] Control+Shift+q
