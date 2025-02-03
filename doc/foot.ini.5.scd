@@ -755,6 +755,9 @@ xdgtoken=95ebdfe56e4f47ddb5bba9d7dc3a2c35
 
 # SECTION: url
 
+Note that you can also add custom regular expressions, see the 'regex'
+section.
+
 *launch*
 	Command to execute when opening URLs. _${url}_ will be replaced
 	with the actual URL. Default: _xdg-open ${url}_.
@@ -783,10 +786,39 @@ xdgtoken=95ebdfe56e4f47ddb5bba9d7dc3a2c35
 	Default: _sadfjklewcmpgh_.
 
 *regex*
-	URL regex to use when auto-detecting URLs. The format is
+
+	Regular expression to use when auto-detecting URLs. The format is
 	"POSIX-Extended Regular Expressions".
 	
 	Default: _([a-z][[:alnum:]-]+:(/{1,3}|[a-z0-9%])|www[:digit:]{0,3}[.])([^[:space:](){}<>]+|\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\])+(\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\]|[^]\[[:space:]`!(){};:'".,<>?«»“”‘’])_
+
+# SECTION: regex
+
+Similar to the 'url' mode, but with custom defined regular expressions
+(and launchers).
+
+To use a custom defined regular expression, you also need to add a key
+binding for it. This is done in the *key-binding* section, see below
+for details. In short, you need to:
+
+```
+[regex:foo]
+regex=foo(bar)?
+launch=path-to-script-or-application {match}
+
+[key-bindings]
+regex-launch=[foo] Control+Shift+q
+regex-copy=[foo] Control+Mod1+Shift+q
+```
+
+*launch*
+	Command to execute when "launching" a regex match. _${match}_ will
+	be replaced with the actual URL. Default: _not set_.
+
+*regex*
+	Regular expression to use when matching text. The format is
+	"POSIX-Extended Regular Expressions". Default: _not set_.
+
 
 # SECTION: cursor
 
@@ -1229,6 +1261,30 @@ e.g. *search-start=none*.
 	Enter URL mode, where all currently visible URLs are tagged with a
 	jump label with a key sequence that will place the URL in the
 	clipboard. Default: _none_.
+
+*regex-launch*
+	Enter regex mode. This works exactly the same as URL mode; all
+	regex matches are tagged with a jump label with a key sequence
+	that will "launch" to match (and exit regex mode).
+	
+	The name of the regex section must be specified in the key
+	binding:
+	
+	```
+	[regex:foo]
+	regex=foo(bar)?
+	launch=path-to-script-or-application {match}
+	
+	[key-bindings]
+	regex-launch=[foo] Control+Shift+q
+	regex-copy=[foo] Control+Mod1+Shift+q
+	```
+	
+	Default: _none_.
+
+*regex-copy*
+	Same as *regex-copy*, but the match is placed in the clipboard,
+	instead of "launched", upon activation. Default: _none_.
 
 *prompt-prev*
 	Jump to the previous, currently not visible, prompt (requires
