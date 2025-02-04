@@ -58,10 +58,10 @@ body:
     id: server
     attributes:
       label: Server/standalone mode
-      description: The issue occurs in foot server, or standalone mode, or both. Note that you **cannot** test standalone mode by manually running `foot` from a `footclient` instance, since then the standalone foot will simply inherit the server process' context.
+      description: Does the issue occur in foot server, or standalone mode, or both? Note that you **cannot** test standalone mode by manually running `foot` from a `footclient` instance, since then the standalone foot will simply inherit the server process' context.
       options:
-        - label: standalone
-        - label: server
+        - label: Standalone
+        - label: Server
   - type: textarea
     id: config
     attributes:
