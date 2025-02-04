@@ -61,9 +61,7 @@ body:
       description: Does the issue occur in foot server, or standalone mode, or both? Note that you **cannot** test standalone mode by manually running `foot` from a `footclient` instance, since then the standalone foot will simply inherit the server process' context.
       options:
         - label: Standalone
-          required: true
         - label: Server
-          required: true
   - type: textarea
     id: config
     attributes:
