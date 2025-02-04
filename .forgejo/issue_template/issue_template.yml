@@ -66,7 +66,7 @@ body:
     id: config
     attributes:
       label: Foot config
-      description: Paste your entire `foot.ini` here
+      description: Paste your entire `foot.ini` here (do not forget to sanitize it!)
       render: ini
     validations:
       required: true
