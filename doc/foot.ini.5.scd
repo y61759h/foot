@@ -801,16 +801,17 @@ Similar to the 'url' mode, but with custom defined regular expressions
 
 To use a custom defined regular expression, you also need to add a key
 binding for it. This is done in the *key-binding* section, see below
-for details. In short, you need to:
+for details. For example, a regex to detect hash digests (e.g. git
+commit hashes) could look like:
 
 ```
-[regex:foo]
-regex=foo(bar)?
+[regex:hashes]
+regex=([a-fA-f0-9]{7,128})
 launch=path-to-script-or-application ${match}
 
 [key-bindings]
-regex-launch=[foo] Control+Shift+q
-regex-copy=[foo] Control+Mod1+Shift+q
+regex-launch=[hashes] Control+Shift+q
+regex-copy=[hashes] Control+Mod1+Shift+q
 ```
 
 *launch*
@@ -1278,13 +1279,13 @@ e.g. *search-start=none*.
 	binding:
 	
 	```
-	[regex:foo]
-	regex=foo(bar)?
+	[regex:hashes]
+	regex=([a-fA-f0-9]{7,128})
 	launch=path-to-script-or-application ${match}
 	
 	[key-bindings]
-	regex-launch=[foo] Control+Shift+q
-	regex-copy=[foo] Control+Mod1+Shift+q
+	regex-launch=[hashes] Control+Shift+q
+	regex-copy=[hashes] Control+Mod1+Shift+q
 	```
 	
 	Default: _none_.
