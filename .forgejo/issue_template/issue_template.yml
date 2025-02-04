@@ -54,6 +54,14 @@ body:
       label: Shell, TUI, application
       description: "Application(s) in which the problem occurs (list all known)"
       placeholder: "bash, neovim"
+  - type: checkboxes
+    id: server
+    attributes:
+      label: Server/standalone mode
+      description: The issue occurs in foot server, or standalone mode, or both. Note that you **cannot** test standalone mode by manually running `foot` from a `footclient` instance, since then the standalone foot will simply inherit the server process' context.
+      options:
+        - label: standalone
+        - label: server
   - type: textarea
     id: config
     attributes:
