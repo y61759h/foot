@@ -387,12 +387,16 @@ fdm_ptmx(struct fdm *fdm, int fd, int events, void *data)
 bool
 term_ptmx_pause(struct terminal *term)
 {
+    if (term->ptmx < 0)
+        return false;
     return fdm_event_del(term->fdm, term->ptmx, EPOLLIN);
 }
 
 bool
 term_ptmx_resume(struct terminal *term)
 {
+    if (term->ptmx < 0)
+        return false;
     return fdm_event_add(term->fdm, term->ptmx, EPOLLIN);
 }
 
