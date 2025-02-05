@@ -211,6 +211,12 @@ fdm_client(struct fdm *fdm, int fd, int events, void *data)
         return true;
     }
 
+    if (tll_length(server->wayl->monitors) == 0) {
+        LOG_ERR("no monitors available for new terminal");
+        client_send_exit_code(client, -26);
+        goto shutdown;
+    }
+
     /* All initialization data received - time to instantiate a terminal! */
 
     xassert(client->instance == NULL);
