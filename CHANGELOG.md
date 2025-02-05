@@ -65,6 +65,11 @@
 * Support for the new Wayland protocol `xdg-system-bell-v1` protocol
   (added in wayland-protocols 1.38), via the new config option
   `bell.system=no|yes` (defaults to `yes`).
+* Added support for custom regex matching ([#1386][1386],
+  [#1872][1872])
+
+[1386]: https://codeberg.org/dnkl/foot/issues/1386
+[1872]: https://codeberg.org/dnkl/foot/issues/1872
 
 
 ### Changed
