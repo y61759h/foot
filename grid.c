@@ -1056,8 +1056,8 @@ grid_resize_and_reflow(
                             from + amount < old_cols &&
                             old_row->cells[from + amount].wc >= CELL_SPACER + 1))
                     {
+                        spacers = old_row->cells[from + amount].wc - CELL_SPACER + 1;
                         amount--;
-                        spacers++;
                     }
 
                     xassert(
