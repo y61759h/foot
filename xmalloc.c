@@ -32,8 +32,17 @@ xcalloc(size_t nmemb, size_t size)
 void *
 xrealloc(void *ptr, size_t size)
 {
+    xassert(size != 0);
     void *alloc = realloc(ptr, size);
-    return unlikely(size == 0) ? alloc : check_alloc(alloc);
+    return check_alloc(alloc);
+}
+
+void *
+xreallocarray(void *ptr, size_t n, size_t size)
+{
+    xassert(n != 0 && size != 0);
+    void *alloc = reallocarray(ptr, n, size);
+    return check_alloc(alloc);
 }
 
 char *

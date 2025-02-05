@@ -65,6 +65,11 @@
 * Support for the new Wayland protocol `xdg-system-bell-v1` protocol
   (added in wayland-protocols 1.38), via the new config option
   `bell.system=no|yes` (defaults to `yes`).
+* Added support for custom regex matching ([#1386][1386],
+  [#1872][1872])
+
+[1386]: https://codeberg.org/dnkl/foot/issues/1386
+[1872]: https://codeberg.org/dnkl/foot/issues/1872
 
 
 ### Changed
@@ -72,12 +77,19 @@
 * Do not try to set a zero width, or height, if the compositor sends a
   _configure_ event with only one dimension being zero
   ([#1925][1925]).
+* Auto-detection of URLs (i.e. not OSC-8 based URLs) are now regex
+  based.
 
 [1925]: https://codeberg.org/dnkl/foot/issues/1925
 
 
 ### Deprecated
 ### Removed
+
+* `url.uri-characters` and `url.protocols`. Both options have been
+  replaced by `url.regex`.
+
+
 ### Fixed
 
 * Kitty keyboard protocol: alternate key reporting failing to report

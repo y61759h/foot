@@ -140,6 +140,8 @@ static const char *const binding_action_map[] = {
     [BIND_ACTION_PROMPT_NEXT] = "prompt-next",
     [BIND_ACTION_UNICODE_INPUT] = "unicode-input",
     [BIND_ACTION_QUIT] = "quit",
+    [BIND_ACTION_REGEX_LAUNCH] = "regex-launch",
+    [BIND_ACTION_REGEX_COPY] = "regex-copy",
 
     /* Mouse-specific actions */
     [BIND_ACTION_SCROLLBACK_UP_MOUSE] = "scrollback-up-mouse",
@@ -207,6 +209,7 @@ static_assert(ALEN(url_binding_action_map) == BIND_ACTION_URL_COUNT,
 struct context {
     struct config *conf;
     const char *section;
+    const char *section_suffix;
     const char *key;
     const char *value;
 
@@ -257,8 +260,9 @@ log_contextual(struct context *ctx, enum log_class log_class,
     char *formatted_msg = xvasprintf(fmt, va);
     va_end(va);
 
-    bool print_dot = ctx->key != NULL;
-    bool print_colon = ctx->value != NULL;
+    const bool print_dot = ctx->key != NULL;
+    const bool print_colon = ctx->value != NULL;
+    const bool print_section_suffix = ctx->section_suffix != NULL;
 
     if (!print_dot)
         ctx->key = "";
@@ -266,10 +270,15 @@ log_contextual(struct context *ctx, enum log_class log_class,
     if (!print_colon)
         ctx->value = "";
 
+    if (!print_section_suffix)
+        ctx->section_suffix = "";
+
     log_and_notify(
-        ctx->conf, log_class, file, lineno, "%s:%d: [%s]%s%s%s%s: %s",
-        ctx->path, ctx->lineno, ctx->section, print_dot ? "." : "",
-        ctx->key, print_colon ? ": " : "", ctx->value, formatted_msg);
+        ctx->conf, log_class, file, lineno, "%s:%d: [%s%s%s]%s%s%s%s: %s",
+        ctx->path, ctx->lineno, ctx->section,
+        print_section_suffix ? ":" : "", ctx->section_suffix,
+        print_dot ? "." : "", ctx->key, print_colon ? ": " : "",
+        ctx->value, formatted_msg);
     free(formatted_msg);
 }
 
@@ -418,14 +427,6 @@ done:
     free(xdg_config_dirs_copy);
     free(path);
     return ret;
-}
-
-static int
-c32cmp_single(const void *_a, const void *_b)
-{
-    const char32_t *a = _a;
-    const char32_t *b = _b;
-    return *a - *b;
 }
 
 static bool
@@ -1225,7 +1226,6 @@ parse_section_url(struct context *ctx)
 {
     struct config *conf = ctx->conf;
     const char *key = ctx->key;
-    const char *value = ctx->value;
 
     if (streq(key, "launch"))
         return value_to_spawn_template(ctx, &conf->url.launch);
@@ -1243,67 +1243,102 @@ parse_section_url(struct context *ctx)
             (int *)&conf->url.osc8_underline);
     }
 
-    else if (streq(key, "protocols")) {
-        for (size_t i = 0; i < conf->url.prot_count; i++)
-            free(conf->url.protocols[i]);
-        free(conf->url.protocols);
+    else if (streq(key, "regex")) {
+        const char *regex = ctx->value;
+        regex_t preg;
 
-        conf->url.max_prot_len = 0;
-        conf->url.prot_count = 0;
-        conf->url.protocols = NULL;
+        int r = regcomp(&preg, regex, REG_EXTENDED);
 
-        char *copy = xstrdup(value);
-
-        for (char *prot = strtok(copy, ",");
-             prot != NULL;
-             prot = strtok(NULL, ","))
-        {
-
-            /* Strip leading whitespace */
-            while (isspace(prot[0]))
-                prot++;
-
-            /* Strip trailing whitespace */
-            size_t len = strlen(prot);
-            while (isspace(prot[len - 1]))
-                len--;
-            prot[len] = '\0';
-
-            size_t chars = mbsntoc32(NULL, prot, len, 0);
-            if (chars == (size_t)-1) {
-                ctx->value = prot;
-                LOG_CONTEXTUAL_ERRNO("invalid protocol");
-                return false;
-            }
-
-            conf->url.prot_count++;
-            conf->url.protocols = xrealloc(
-                conf->url.protocols,
-                conf->url.prot_count * sizeof(conf->url.protocols[0]));
-
-            size_t idx = conf->url.prot_count - 1;
-            conf->url.protocols[idx] = xmalloc((chars + 1 + 3) * sizeof(char32_t));
-            mbsntoc32(conf->url.protocols[idx], prot, len, chars + 1);
-            c32cpy(&conf->url.protocols[idx][chars], U"://");
-
-            chars += 3;  /* Include the "://" */
-            if (chars > conf->url.max_prot_len)
-                conf->url.max_prot_len = chars;
+        if (r != 0) {
+            char err_buf[128];
+            regerror(r, &preg, err_buf, sizeof(err_buf));
+            LOG_CONTEXTUAL_ERR("invalid regex: %s", err_buf);
+            return false;
         }
 
-        free(copy);
+        if (preg.re_nsub == 0) {
+            LOG_CONTEXTUAL_ERR("invalid regex: no marked subexpression(s)");
+            regfree(&preg);
+            return false;
+        }
+
+        regfree(&conf->url.preg);
+        free(conf->url.regex);
+
+        conf->url.regex = xstrdup(regex);
+        conf->url.preg = preg;
         return true;
     }
 
-    else if (streq(key, "uri-characters")) {
-        if (!value_to_wchars(ctx, &conf->url.uri_characters))
+    else {
+        LOG_CONTEXTUAL_ERR("not a valid option: %s", key);
+        return false;
+    }
+}
+
+static bool
+parse_section_regex(struct context *ctx)
+{
+    struct config *conf = ctx->conf;
+    const char *key = ctx->key;
+
+    const char *regex_name =
+        ctx->section_suffix != NULL ? ctx->section_suffix : "";
+
+    struct custom_regex *regex = NULL;
+    tll_foreach(conf->custom_regexes, it) {
+        if (streq(it->item.name, regex_name)) {
+            regex = &it->item;
+            break;
+        }
+    }
+
+    if (streq(key, "regex")) {
+        const char *regex_string = ctx->value;
+        regex_t preg;
+
+        int r = regcomp(&preg, regex_string, REG_EXTENDED);
+
+        if (r != 0) {
+            char err_buf[128];
+            regerror(r, &preg, err_buf, sizeof(err_buf));
+            LOG_CONTEXTUAL_ERR("invalid regex: %s", err_buf);
+            return false;
+        }
+
+        if (preg.re_nsub == 0) {
+            LOG_CONTEXTUAL_ERR("invalid regex: no marked subexpression(s)");
+            regfree(&preg);
+            return false;
+        }
+
+        if (regex == NULL) {
+            tll_push_back(conf->custom_regexes,
+                          ((struct custom_regex){.name = xstrdup(regex_name)}));
+            regex = &tll_back(conf->custom_regexes);
+        }
+
+        regfree(&regex->preg);
+        free(regex->regex);
+
+        regex->regex = xstrdup(regex_string);
+        regex->preg = preg;
+        return true;
+    }
+
+    else if (streq(key, "launch")) {
+        struct config_spawn_template launch;
+        if (!value_to_spawn_template(ctx, &launch))
             return false;
 
-        qsort(
-            conf->url.uri_characters,
-            c32len(conf->url.uri_characters),
-            sizeof(conf->url.uri_characters[0]),
-            &c32cmp_single);
+        if (regex == NULL) {
+            tll_push_back(conf->custom_regexes,
+                          ((struct custom_regex){.name = xstrdup(regex_name)}));
+            regex = &tll_back(conf->custom_regexes);
+        }
+
+        spawn_template_free(&regex->launch);
+        regex->launch = launch;
         return true;
     }
 
@@ -1654,6 +1689,7 @@ free_binding_aux(struct binding_aux *aux)
     case BINDING_AUX_NONE: break;
     case BINDING_AUX_PIPE: free_argv(&aux->pipe); break;
     case BINDING_AUX_TEXT: free(aux->text.data); break;
+    case BINDING_AUX_REGEX: free(aux->regex_name); break;
     }
 }
 
@@ -1743,7 +1779,10 @@ binding_aux_equal(const struct binding_aux *a,
 
     case BINDING_AUX_TEXT:
         return a->text.len == b->text.len &&
-            memcmp(a->text.data, b->text.data, a->text.len) == 0;
+               memcmp(a->text.data, b->text.data, a->text.len) == 0;
+
+    case BINDING_AUX_REGEX:
+        return streq(a->regex_name, b->regex_name);
     }
 
     BUG("invalid AUX type: %d", a->type);
@@ -2017,19 +2056,23 @@ modifiers_disjoint(const config_modifier_list_t *mods1,
 }
 
 static char * NOINLINE
-modifiers_to_str(const config_modifier_list_t *mods)
+modifiers_to_str(const config_modifier_list_t *mods, bool strip_last_plus)
 {
-    size_t len = tll_length(*mods);  /* '+' , and NULL terminator */
+    size_t len = tll_length(*mods);  /* '+' separator */
     tll_foreach(*mods, it)
         len += strlen(it->item);
 
-    char *ret = xmalloc(len);
+    char *ret = xmalloc(len + 1);
     size_t idx = 0;
     tll_foreach(*mods, it) {
         idx += snprintf(&ret[idx], len - idx, "%s", it->item);
         ret[idx++] = '+';
     }
-    ret[--idx] = '\0';
+
+    if (strip_last_plus)
+        idx--;
+
+    ret[idx] = '\0';
     return ret;
 }
 
@@ -2088,27 +2131,73 @@ pipe_argv_from_value(struct context *ctx, struct argv *argv)
     return remove_len;
 }
 
+static ssize_t NOINLINE
+regex_name_from_value(struct context *ctx, char **regex_name)
+{
+    *regex_name = NULL;
+
+    if (ctx->value[0] != '[')
+        return 0;
+
+    const char *regex_end = strrchr(ctx->value, ']');
+    if (regex_end == NULL) {
+        LOG_CONTEXTUAL_ERR("unclosed '['");
+        return -1;
+    }
+
+    size_t regex_len = regex_end - ctx->value - 1;
+    *regex_name = xstrndup(&ctx->value[1], regex_len);
+
+    ssize_t remove_len = regex_end + 1 - ctx->value;
+    ctx->value = regex_end + 1;
+    while (isspace(*ctx->value)) {
+        ctx->value++;
+        remove_len++;
+    }
+
+    return remove_len;
+}
+
+
 static bool NOINLINE
 parse_key_binding_section(struct context *ctx,
                           int action_count,
                           const char *const action_map[static action_count],
                           struct config_key_binding_list *bindings)
 {
-    struct binding_aux aux;
-
-    ssize_t pipe_remove_len = pipe_argv_from_value(ctx, &aux.pipe);
-    if (pipe_remove_len < 0)
-        return false;
-
-    aux.type = pipe_remove_len == 0 ? BINDING_AUX_NONE : BINDING_AUX_PIPE;
-    aux.master_copy = true;
-
     for (int action = 0; action < action_count; action++) {
         if (action_map[action] == NULL)
             continue;
 
         if (!streq(ctx->key, action_map[action]))
             continue;
+
+        struct binding_aux aux = {.type = BINDING_AUX_NONE, .master_copy = true};
+
+        /* TODO: this is ugly... */
+        if (action_map == binding_action_map &&
+            action >= BIND_ACTION_PIPE_SCROLLBACK &&
+            action <= BIND_ACTION_PIPE_COMMAND_OUTPUT)
+        {
+            ssize_t pipe_remove_len = pipe_argv_from_value(ctx, &aux.pipe);
+            if (pipe_remove_len <= 0)
+                return false;
+
+            aux.type = BINDING_AUX_PIPE;
+            aux.master_copy = true;
+        } else if (action_map == binding_action_map &&
+                   action >= BIND_ACTION_REGEX_LAUNCH &&
+                   action <= BIND_ACTION_REGEX_COPY)
+        {
+            char *regex_name = NULL;
+            ssize_t regex_remove_len = regex_name_from_value(ctx, &regex_name);
+            if (regex_remove_len <= 0)
+                return false;
+
+            aux.type = BINDING_AUX_REGEX;
+            aux.master_copy = true;
+            aux.regex_name = regex_name;
+        }
 
         if (!value_to_key_combos(ctx, action, &aux, bindings, KEY_BINDING)) {
             free_binding_aux(&aux);
@@ -2119,7 +2208,6 @@ parse_key_binding_section(struct context *ctx,
     }
 
     LOG_CONTEXTUAL_ERR("not a valid action: %s", ctx->key);
-    free_binding_aux(&aux);
     return false;
 }
 
@@ -2317,7 +2405,7 @@ resolve_key_binding_collisions(struct config *conf, const char *section_name,
         }
 
         if (collision_type != COLLISION_NONE) {
-            char *modifier_names = modifiers_to_str(mods1);
+            char *modifier_names = modifiers_to_str(mods1, false);
             char sym_name[64];
 
             switch (type){
@@ -2359,7 +2447,7 @@ resolve_key_binding_collisions(struct config *conf, const char *section_name,
 
             case COLLISION_OVERRIDE: {
                 char *override_names = modifiers_to_str(
-                    &conf->mouse.selection_override_modifiers);
+                    &conf->mouse.selection_override_modifiers, true);
 
                 if (override_names[0] != '\0')
                     override_names[strlen(override_names) - 1] = '\0';
@@ -2698,7 +2786,7 @@ parse_section_touch(struct context *ctx) {
 }
 
 static bool
-parse_key_value(char *kv, const char **section, const char **key, const char **value)
+parse_key_value(char *kv, char **section, const char **key, const char **value)
 {
     bool section_is_needed = section != NULL;
 
@@ -2767,6 +2855,7 @@ enum section {
     SECTION_DESKTOP_NOTIFICATIONS,
     SECTION_SCROLLBACK,
     SECTION_URL,
+    SECTION_REGEX,
     SECTION_COLORS,
     SECTION_CURSOR,
     SECTION_MOUSE,
@@ -2788,6 +2877,7 @@ typedef bool (*parser_fun_t)(struct context *ctx);
 static const struct {
     parser_fun_t fun;
     const char *name;
+    bool allow_colon_suffix;
 } section_info[] = {
     [SECTION_MAIN] =            {&parse_section_main, "main"},
     [SECTION_SECURITY] =        {&parse_section_security, "security"},
@@ -2795,6 +2885,7 @@ static const struct {
     [SECTION_DESKTOP_NOTIFICATIONS] = {&parse_section_desktop_notifications, "desktop-notifications"},
     [SECTION_SCROLLBACK] =      {&parse_section_scrollback, "scrollback"},
     [SECTION_URL] =             {&parse_section_url, "url"},
+    [SECTION_REGEX] =           {&parse_section_regex, "regex", true},
     [SECTION_COLORS] =          {&parse_section_colors, "colors"},
     [SECTION_CURSOR] =          {&parse_section_cursor, "cursor"},
     [SECTION_MOUSE] =           {&parse_section_mouse, "mouse"},
@@ -2812,11 +2903,29 @@ static const struct {
 static_assert(ALEN(section_info) == SECTION_COUNT, "section info array size mismatch");
 
 static enum section
-str_to_section(const char *str)
+str_to_section(char *str, char **suffix)
 {
+    *suffix = NULL;
+
     for (enum section section = SECTION_MAIN; section < SECTION_COUNT; ++section) {
-        if (streq(str, section_info[section].name))
+        const char *name = section_info[section].name;
+
+        if (streq(str, name))
             return section;
+
+        else if (section_info[section].allow_colon_suffix) {
+            const size_t str_len = strlen(str);
+            const size_t name_len = strlen(name);
+
+            /* At least "section:" chars? */
+            if (str_len > name_len + 1) {
+                if (strncmp(str, name, name_len) == 0 && str[name_len] == ':') {
+                    str[name_len] = '\0';
+                    *suffix = &str[name_len + 1];
+                    return section;
+                }
+            }
+        }
     }
     return SECTION_COUNT;
 }
@@ -2840,10 +2949,12 @@ parse_config_file(FILE *f, struct config *conf, const char *path, bool errors_ar
     }
 
     char *section_name = xstrdup("main");
+    char *section_suffix = NULL;
 
     struct context context = {
         .conf = conf,
         .section = section_name,
+        .section_suffix = section_suffix,
         .path = path,
         .lineno = 0,
         .errors_are_fatal = errors_are_fatal,
@@ -2924,7 +3035,8 @@ parse_config_file(FILE *f, struct config *conf, const char *path, bool errors_ar
                 error_or_continue();
             }
 
-            section = str_to_section(key_value);
+            char *maybe_section_suffix;
+            section = str_to_section(key_value, &maybe_section_suffix);
             if (section == SECTION_COUNT) {
                 context.section = key_value;
                 LOG_CONTEXTUAL_ERR("invalid section name: %s", key_value);
@@ -2933,8 +3045,11 @@ parse_config_file(FILE *f, struct config *conf, const char *path, bool errors_ar
             }
 
             free(section_name);
+            free(section_suffix);
             section_name = xstrdup(key_value);
+            section_suffix = maybe_section_suffix != NULL ? xstrdup(maybe_section_suffix) : NULL;
             context.section = section_name;
+            context.section_suffix = section_suffix;
 
             /* Process next line */
             continue;
@@ -2974,6 +3089,7 @@ parse_config_file(FILE *f, struct config *conf, const char *path, bool errors_ar
 
 done:
     free(section_name);
+    free(section_suffix);
     free(_line);
     return ret;
 }
@@ -3068,7 +3184,6 @@ add_default_search_bindings(struct config *conf)
         {BIND_ACTION_SEARCH_DELETE_NEXT_WORD, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_Delete}}},
         {BIND_ACTION_SEARCH_DELETE_NEXT_WORD, m(XKB_MOD_NAME_ALT), {{XKB_KEY_d}}},
         {BIND_ACTION_SEARCH_EXTEND_CHAR, m(XKB_MOD_NAME_SHIFT), {{XKB_KEY_Right}}},
-        {BIND_ACTION_SEARCH_EXTEND_WORD, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_w}}},
         {BIND_ACTION_SEARCH_EXTEND_WORD, m(XKB_MOD_NAME_CTRL "+" XKB_MOD_NAME_SHIFT), {{XKB_KEY_Right}}},
         {BIND_ACTION_SEARCH_EXTEND_WORD, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_w}}},
         {BIND_ACTION_SEARCH_EXTEND_WORD_WS, m(XKB_MOD_NAME_CTRL "+" XKB_MOD_NAME_SHIFT), {{XKB_KEY_w}}},
@@ -3196,9 +3311,9 @@ config_load(struct config *conf, const char *conf_path,
         },
         .url = {
             .label_letters = xc32dup(U"sadfjklewcmpgh"),
-            .uri_characters = xc32dup(U"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.,~:;/?#@!$&%*+=\"'()[]"),
             .osc8_underline = OSC8_UNDERLINE_URL_MODE,
         },
+        .custom_regexes = tll_init(),
         .can_shape_grapheme = fcft_caps & FCFT_CAPABILITY_GRAPHEME_SHAPING,
         .scrollback = {
             .lines = 1000,
@@ -3315,34 +3430,46 @@ config_load(struct config *conf, const char *conf_path,
     tokenize_cmdline("--action ${action-name}=${action-label}", &conf->desktop_notifications.command_action_arg.argv.args);
     tokenize_cmdline("xdg-open ${url}", &conf->url.launch.argv.args);
 
-    static const char32_t *url_protocols[] = {
-        U"http://",
-        U"https://",
-        U"ftp://",
-        U"ftps://",
-        U"file://",
-        U"gemini://",
-        U"gopher://",
-        U"irc://",
-        U"ircs://",
-    };
-    conf->url.protocols = xmalloc(
-        ALEN(url_protocols) * sizeof(conf->url.protocols[0]));
-    conf->url.prot_count = ALEN(url_protocols);
-    conf->url.max_prot_len = 0;
+    {
+        /*
+         * Based on https://gist.github.com/gruber/249502, but modified:
+         *  - Do not allow {} at all
+         *  - Do allow matched []
+         */
+        const char *url_regex_string =
+            "("
+                "("
+                    "[a-z][[:alnum:]-]+:"       // protocol
+                    "("
+                        "/{1,3}|[a-z0-9%]"     // slashes (what's the OR part for?)
+                    ")"
+                    "|"
+                    "www[:digit:]{0,3}[.]"
+                    //"|"
+                    //"[a-z0-9.\\-]+[.][a-z]{2,4}/"  /* "looks like domain name followed by a slash" - remove? */
+                ")"
+                "("
+                    "[^[:space:](){}<>]+"
+                    "|"
+                    "\\(([^[:space:](){}<>]+|(\\([^[:space:](){}<>]+\\)))*\\)"
+                    "|"
+                    "\\[([^]\\[[:space:](){}<>]+|(\\[[^]\\[[:space:](){}<>]+\\]))*\\]"
+                ")+"
+                "("
+                    "\\(([^[:space:](){}<>]+|(\\([^[:space:](){}<>]+\\)))*\\)"
+                    "|"
+                    "\\[([^]\\[[:space:](){}<>]+|(\\[[^]\\[[:space:](){}<>]+\\]))*\\]"
+                    "|"
+                    "[^]\\[[:space:]`!(){};:'\".,<>?«»“”‘’]"
+                ")"
+            ")"
+        ;
 
-    for (size_t i = 0; i < ALEN(url_protocols); i++) {
-        size_t len = c32len(url_protocols[i]);
-        if (len > conf->url.max_prot_len)
-            conf->url.max_prot_len = len;
-        conf->url.protocols[i] = xc32dup(url_protocols[i]);
+        int r = regcomp(&conf->url.preg, url_regex_string, REG_EXTENDED);
+        xassert(r == 0);
+        conf->url.regex = xstrdup(url_regex_string);
+        xassert(conf->url.preg.re_nsub >= 1);
     }
-
-    qsort(
-        conf->url.uri_characters,
-        c32len(conf->url.uri_characters),
-        sizeof(conf->url.uri_characters[0]),
-        &c32cmp_single);
 
     tll_foreach(*initial_user_notifications, it) {
         tll_push_back(conf->notifications, it->item);
@@ -3430,6 +3557,8 @@ bool
 config_override_apply(struct config *conf, config_override_t *overrides,
                       bool errors_are_fatal)
 {
+    char *section_name = NULL;
+
     struct context context = {
         .conf = conf,
         .path = "override",
@@ -3441,8 +3570,7 @@ config_override_apply(struct config *conf, config_override_t *overrides,
     tll_foreach(*overrides, it) {
         context.lineno++;
 
-        if (!parse_key_value(
-                it->item, &context.section, &context.key, &context.value))
+        if (!parse_key_value(it->item, &section_name, &context.key, &context.value))
         {
             LOG_CONTEXTUAL_ERR("syntax error: key/value pair has no %s",
                                context.key == NULL ? "key" : "value");
@@ -3451,20 +3579,26 @@ config_override_apply(struct config *conf, config_override_t *overrides,
             continue;
         }
 
-        if (context.section[0] == '\0') {
+        if (section_name[0] == '\0') {
             LOG_CONTEXTUAL_ERR("empty section name");
             if (errors_are_fatal)
                 return false;
             continue;
         }
 
-        enum section section = str_to_section(context.section);
+        char *maybe_section_suffix = NULL;
+        enum section section = str_to_section(section_name, &maybe_section_suffix);
+
+        context.section = section_name;
+        context.section_suffix = maybe_section_suffix;
+
         if (section == SECTION_COUNT) {
-            LOG_CONTEXTUAL_ERR("invalid section name: %s", context.section);
+            LOG_CONTEXTUAL_ERR("invalid section name: %s", section_name);
             if (errors_are_fatal)
                 return false;
             continue;
         }
+
         parser_fun_t section_parser = section_info[section].fun;
         xassert(section_parser != NULL);
 
@@ -3500,6 +3634,7 @@ key_binding_list_clone(struct config_key_binding_list *dst,
     struct argv *last_master_argv = NULL;
     uint8_t *last_master_text_data = NULL;
     size_t last_master_text_len = 0;
+    char *last_master_regex_name = NULL;
 
     dst->count = src->count;
     dst->arr = xmalloc(src->count * sizeof(dst->arr[0]));
@@ -3547,6 +3682,16 @@ key_binding_list_clone(struct config_key_binding_list *dst,
             }
             last_master_argv = NULL;
             break;
+
+        case BINDING_AUX_REGEX:
+            if (old->aux.master_copy) {
+                new->aux.regex_name = xstrdup(old->aux.regex_name);
+                last_master_regex_name = new->aux.regex_name;
+            } else {
+                xassert(last_master_regex_name != NULL);
+                new->aux.regex_name = last_master_regex_name;
+            }
+            break;
         }
     }
 }
@@ -3577,12 +3722,23 @@ config_clone(const struct config *old)
     config_font_list_clone(&conf->csd.font, &old->csd.font);
 
     conf->url.label_letters = xc32dup(old->url.label_letters);
-    conf->url.uri_characters = xc32dup(old->url.uri_characters);
     spawn_template_clone(&conf->url.launch, &old->url.launch);
-    conf->url.protocols = xmalloc(
-        old->url.prot_count * sizeof(conf->url.protocols[0]));
-    for (size_t i = 0; i < old->url.prot_count; i++)
-        conf->url.protocols[i] = xc32dup(old->url.protocols[i]);
+    conf->url.regex = xstrdup(old->url.regex);
+    regcomp(&conf->url.preg, conf->url.regex, REG_EXTENDED);
+
+    memset(&conf->custom_regexes, 0, sizeof(conf->custom_regexes));
+    tll_foreach(old->custom_regexes, it) {
+        const struct custom_regex *old_regex = &it->item;
+
+        tll_push_back(conf->custom_regexes,
+                      ((struct custom_regex){.name = xstrdup(old_regex->name),
+                                             .regex = xstrdup(old_regex->regex)}));
+
+
+        struct custom_regex *new_regex = &tll_back(conf->custom_regexes);
+        regcomp(&new_regex->preg, new_regex->regex, REG_EXTENDED);
+        spawn_template_clone(&new_regex->launch, &old_regex->launch);
+    }
 
     key_binding_list_clone(&conf->bindings.key, &old->bindings.key);
     key_binding_list_clone(&conf->bindings.search, &old->bindings.search);
@@ -3663,10 +3819,17 @@ config_free(struct config *conf)
 
     free(conf->url.label_letters);
     spawn_template_free(&conf->url.launch);
-    for (size_t i = 0; i < conf->url.prot_count; i++)
-        free(conf->url.protocols[i]);
-    free(conf->url.protocols);
-    free(conf->url.uri_characters);
+    regfree(&conf->url.preg);
+    free(conf->url.regex);
+
+    tll_foreach(conf->custom_regexes, it) {
+        struct custom_regex *regex = &it->item;
+        free(regex->name);
+        free(regex->regex);
+        regfree(&regex->preg);
+        spawn_template_free(&regex->launch);
+        tll_remove(conf->custom_regexes, it);
+    }
 
     free_key_binding_list(&conf->bindings.key);
     free_key_binding_list(&conf->bindings.search);

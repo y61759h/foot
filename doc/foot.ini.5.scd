@@ -755,6 +755,9 @@ xdgtoken=95ebdfe56e4f47ddb5bba9d7dc3a2c35
 
 # SECTION: url
 
+Note that you can also add custom regular expressions, see the 'regex'
+section.
+
 *launch*
 	Command to execute when opening URLs. _${url}_ will be replaced
 	with the actual URL. Default: _xdg-open ${url}_.
@@ -782,19 +785,48 @@ xdgtoken=95ebdfe56e4f47ddb5bba9d7dc3a2c35
 	
 	Default: _sadfjklewcmpgh_.
 
-*protocols*
-	Comma separated list of protocols (schemes) that should be
-	recognized in URL mode. Note that only auto-detected URLs are
-	affected by this option. OSC-8 URLs are always enabled, regardless
-	of protocol. Default: _http, https, ftp, ftps, file, gemini,
-	gopher, irc, ircs_.
-
-*uri-characters*
-	Set of characters allowed in auto-detected URLs. Any character not
-	included in this set constitutes a URL delimiter.
+*regex*
+	Regular expression to use when auto-detecting URLs. The format is
+	"POSIX-Extended Regular Expressions". Note that the first marked
+	subexpression is used as the URL. In other words, if you want the
+	whole regex match to be used as an URL, surround all of it with
+	parenthesis: *(regex-pattern)*.
 	
-	Default:
-	_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-\_.,~:;/?#@!$&%\*+="'()[]_
+	Default: _(([a-z][[:alnum:]-]+:(/{1,3}|[a-z0-9%])|www[:digit:]{0,3}[.])([^[:space:](){}<>]+|\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\])+(\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\]|[^]\[[:space:]`!(){};:'".,<>?«»“”‘’]))_
+
+# SECTION: regex
+
+Similar to the 'url' mode, but with custom defined regular expressions
+(and launchers).
+
+To use a custom defined regular expression, you also need to add a key
+binding for it. This is done in the *key-binding* section, see below
+for details. For example, a regex to detect hash digests (e.g. git
+commit hashes) could look like:
+
+```
+[regex:hashes]
+regex=([a-fA-f0-9]{7,128})
+launch=path-to-script-or-application ${match}
+
+[key-bindings]
+regex-launch=[hashes] Control+Shift+q
+regex-copy=[hashes] Control+Mod1+Shift+q
+```
+
+*launch*
+	Command to execute when "launching" a regex match. _${match}_ will
+	be replaced with the actual URL. Default: _not set_.
+
+*regex*
+	Regular expression to use when matching text. The format is
+	"POSIX-Extended Regular Expressions". Note that the first marked
+	subexpression is used as the match. In other words, if you want
+	the whole regex match to be used, surround all of it with
+	parenthesis: *(regex-pattern)*.
+	
+	Default: _not set_.
+
 
 # SECTION: cursor
 
@@ -1237,6 +1269,30 @@ e.g. *search-start=none*.
 	Enter URL mode, where all currently visible URLs are tagged with a
 	jump label with a key sequence that will place the URL in the
 	clipboard. Default: _none_.
+
+*regex-launch*
+	Enter regex mode. This works exactly the same as URL mode; all
+	regex matches are tagged with a jump label with a key sequence
+	that will "launch" to match (and exit regex mode).
+	
+	The name of the regex section must be specified in the key
+	binding:
+	
+	```
+	[regex:hashes]
+	regex=([a-fA-f0-9]{7,128})
+	launch=path-to-script-or-application ${match}
+	
+	[key-bindings]
+	regex-launch=[hashes] Control+Shift+q
+	regex-copy=[hashes] Control+Mod1+Shift+q
+	```
+	
+	Default: _none_.
+
+*regex-copy*
+	Same as *regex-copy*, but the match is placed in the clipboard,
+	instead of "launched", upon activation. Default: _none_.
 
 *prompt-prev*
 	Jump to the previous, currently not visible, prompt (requires

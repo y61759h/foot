@@ -107,50 +107,6 @@ test_c32string(struct context *ctx, bool (*parse_fun)(struct context *ctx),
 }
 
 static void
-test_protocols(struct context *ctx, bool (*parse_fun)(struct context *ctx),
-               const char *key, char32_t **const *ptr)
-{
-    ctx->key = key;
-
-    static const struct {
-        const char *option_string;
-        int count;
-        const char32_t *value[2];
-        bool invalid;
-    } input[] = {
-        {""},
-        {"http", 1, {U"http://"}},
-        {" http", 1, {U"http://"}},
-        {"http, https", 2, {U"http://", U"https://"}},
-        {"longprotocolislong", 1, {U"longprotocolislong://"}},
-    };
-
-    for (size_t i = 0; i < ALEN(input); i++) {
-        ctx->value = input[i].option_string;
-
-        if (input[i].invalid) {
-            if (parse_fun(ctx)) {
-                BUG("[%s].%s=%s: did not fail to parse as expected",
-                    ctx->section, ctx->key, &ctx->value[0]);
-            }
-        } else {
-            if (!parse_fun(ctx)) {
-                BUG("[%s].%s=%s: failed to parse",
-                    ctx->section, ctx->key, &ctx->value[0]);
-            }
-            for (int c = 0; c < input[i].count; c++) {
-                if (c32cmp((*ptr)[c], input[i].value[c]) != 0) {
-                    BUG("[%s].%s=%s: set value[%d] (%ls) not the expected one (%ls)",
-                        ctx->section, ctx->key, &ctx->value[c], c,
-                        (const wchar_t *)(*ptr)[c],
-                        (const wchar_t *)input[i].value[c]);
-                }
-            }
-        }
-    }
-}
-
-static void
 test_boolean(struct context *ctx, bool (*parse_fun)(struct context *ctx),
              const char *key, const bool *ptr)
 {
@@ -647,9 +603,6 @@ test_section_url(void)
               (int []){OSC8_UNDERLINE_URL_MODE, OSC8_UNDERLINE_ALWAYS},
               (int *)&conf.url.osc8_underline);
     test_c32string(&ctx, &parse_section_url, "label-letters", &conf.url.label_letters);
-    test_protocols(&ctx, &parse_section_url, "protocols", &conf.url.protocols);
-
-    /* TODO: uri-characters (wchar string, but sorted) */
 
     config_free(&conf);
 }
@@ -843,7 +796,7 @@ static void
 test_key_binding(struct context *ctx, bool (*parse_fun)(struct context *ctx),
                  int action, int max_action, const char *const *map,
                  struct config_key_binding_list *bindings,
-                 enum key_binding_type type)
+                 enum key_binding_type type, bool need_argv, bool need_section_id)
 {
     xassert(map[action] != NULL);
     xassert(bindings->count == 0);
@@ -855,7 +808,10 @@ test_key_binding(struct context *ctx, bool (*parse_fun)(struct context *ctx),
     const bool alt = action % 3;
     const bool shift = action % 4;
     const bool super = action % 5;
-    const bool argv = action % 6;
+    const bool argv = need_argv;
+    const bool section_id = need_section_id;
+
+    xassert(!(argv && section_id));
 
     static const char *const args[] = {
         "command", "arg1", "arg2", "arg3 has spaces"};
@@ -894,7 +850,7 @@ test_key_binding(struct context *ctx, bool (*parse_fun)(struct context *ctx),
         xkb_keysym_get_name(sym, sym_name, sizeof(sym_name));
 
         snprintf(value, sizeof(value), "%s%s%s",
-                 argv ? "[command arg1 arg2 \"arg3 has spaces\"] " : "",
+                 argv ? "[command arg1 arg2 \"arg3 has spaces\"] " : section_id ? "[foobar]" : "",
                  modifier_string, sym_name);
         break;
     }
@@ -903,7 +859,7 @@ test_key_binding(struct context *ctx, bool (*parse_fun)(struct context *ctx),
         const char *const button_name = button_map[button_idx].name;
         int chars = snprintf(
             value, sizeof(value), "%s%s%s",
-            argv ? "[command arg1 arg2 \"arg3 has spaces\"] " : "",
+            argv ? "[command arg1 arg2 \"arg3 has spaces\"] " : section_id ? "[foobar]" : "",
             modifier_string, button_name);
 
         xassert(click_count > 0);
@@ -943,6 +899,18 @@ test_key_binding(struct context *ctx, bool (*parse_fun)(struct context *ctx),
                 "expected NULL terminator at arg #%zu, got=\"%s\"",
                 ctx->section, ctx->key, ctx->value,
                 ALEN(args), binding->aux.pipe.args[ALEN(args)]);
+        }
+    } else if (section_id) {
+        if (binding->aux.regex_name == NULL) {
+            BUG("[%s].%s=%s: regex name is NULL",
+                ctx->section, ctx->key, ctx->value);
+        }
+
+        if (!streq(binding->aux.regex_name, "foobar")) {
+            BUG("[%s].%s=%s: regex name not the expected one: "
+                "expected=\"%s\", got=\"%s\"",
+                ctx->section, ctx->key, ctx->value,
+                "foobar", binding->aux.regex_name);
         }
     } else {
         if (binding->aux.pipe.args != NULL) {
@@ -1139,7 +1107,9 @@ test_section_key_bindings(void)
         test_key_binding(
             &ctx, &parse_section_key_bindings,
             action, BIND_ACTION_KEY_COUNT - 1,
-            binding_action_map, &conf.bindings.key, KEY_BINDING);
+            binding_action_map, &conf.bindings.key, KEY_BINDING,
+            action >= BIND_ACTION_PIPE_SCROLLBACK && action <= BIND_ACTION_PIPE_COMMAND_OUTPUT,
+            action >= BIND_ACTION_REGEX_LAUNCH && action <= BIND_ACTION_REGEX_COPY);
     }
 
     config_free(&conf);
@@ -1174,7 +1144,8 @@ test_section_search_bindings(void)
         test_key_binding(
             &ctx, &parse_section_search_bindings,
             action, BIND_ACTION_SEARCH_COUNT - 1,
-            search_binding_action_map, &conf.bindings.search, KEY_BINDING);
+            search_binding_action_map, &conf.bindings.search, KEY_BINDING,
+            false, false);
     }
 
     config_free(&conf);
@@ -1210,7 +1181,8 @@ test_section_url_bindings(void)
         test_key_binding(
             &ctx, &parse_section_url_bindings,
             action, BIND_ACTION_URL_COUNT - 1,
-            url_binding_action_map, &conf.bindings.url, KEY_BINDING);
+            url_binding_action_map, &conf.bindings.url, KEY_BINDING,
+            false, false);
     }
 
     config_free(&conf);
@@ -1246,7 +1218,8 @@ test_section_mouse_bindings(void)
         test_key_binding(
             &ctx, &parse_section_mouse_bindings,
             action, BIND_ACTION_COUNT - 1,
-            binding_action_map, &conf.bindings.mouse, MOUSE_BINDING);
+            binding_action_map, &conf.bindings.mouse, MOUSE_BINDING,
+            false, false);
     }
 
     config_free(&conf);
