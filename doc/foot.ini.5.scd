@@ -788,8 +788,8 @@ section.
 *regex*
 	Regular expression to use when auto-detecting URLs. The format is
 	"POSIX-Extended Regular Expressions". Note that the first marked
-	subexpression is used a the URL. In other words, if you want the
-	whole regex matćh to be used as an URL, surround all of it with
+	subexpression is used as the URL. In other words, if you want the
+	whole regex match to be used as an URL, surround all of it with
 	parenthesis: *(regex-pattern)*.
 	
 	Default: _(([a-z][[:alnum:]-]+:(/{1,3}|[a-z0-9%])|www[:digit:]{0,3}[.])([^[:space:](){}<>]+|\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\])+(\(([^[:space:](){}<>]+|(\([^[:space:](){}<>]+\)))\*\)|\[([^]\[[:space:](){}<>]+|(\[[^]\[[:space:](){}<>]+\]))\*\]|[^]\[[:space:]`!(){};:'".,<>?«»“”‘’]))_
@@ -821,8 +821,8 @@ regex-copy=[hashes] Control+Mod1+Shift+q
 *regex*
 	Regular expression to use when matching text. The format is
 	"POSIX-Extended Regular Expressions". Note that the first marked
-	subexpression is used a the URL. In other words, if you want the
-	whole regex matćh to be used as an URL, surround all of it with
+	subexpression is used as the match. In other words, if you want
+	the whole regex match to be used, surround all of it with
 	parenthesis: *(regex-pattern)*.
 	
 	Default: _not set_.
