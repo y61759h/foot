@@ -793,7 +793,7 @@ csi_dispatch(struct terminal *term, uint8_t final)
                 const int width = c32width(term->vt.last_printed);
                 if (width > 0) {
                     for (int i = 0; i < count; i++)
-                        term_print(term, term->vt.last_printed, width);
+                        term_print(term, term->vt.last_printed, width, false);
                 }
             }
             break;

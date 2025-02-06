@@ -105,9 +105,13 @@
   ([#1929][1929]).
 * Foot not closing file descriptors for unrecognized or `no_keymap`
   keymaps.
+* Combining characters (including emojis consisting of multiple
+  codepoints) not being handled correctly when _insert mode_ is
+  enabled ([#1947][1947]).
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 [1929]: https://codeberg.org/dnkl/foot/issues/1929
+[1947]: https://codeberg.org/dnkl/foot/issues/1947
 
 
 ### Security

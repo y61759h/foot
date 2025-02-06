@@ -3896,7 +3896,7 @@ term_fill(struct terminal *term, int r, int c, uint8_t data, size_t count,
 }
 
 void
-term_print(struct terminal *term, char32_t wc, int width)
+term_print(struct terminal *term, char32_t wc, int width, bool insert_mode_disable)
 {
     xassert(width > 0);
 
@@ -3918,7 +3918,8 @@ term_print(struct terminal *term, char32_t wc, int width)
     }
 
     print_linewrap(term);
-    print_insert(term, width);
+    if (!insert_mode_disable)
+        print_insert(term, width);
 
     int col = grid->cursor.point.col;
 
@@ -3990,7 +3991,7 @@ term_print(struct terminal *term, char32_t wc, int width)
 static void
 ascii_printer_generic(struct terminal *term, char32_t wc)
 {
-    term_print(term, wc, 1);
+    term_print(term, wc, 1, false);
 }
 
 static void

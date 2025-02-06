@@ -703,6 +703,7 @@ static void
 action_utf8_print(struct terminal *term, char32_t wc)
 {
     int width = c32width(wc);
+    bool insert_mode_disable = false;
     const bool grapheme_clustering = term->grapheme_shaping;
 
 #if !defined(FOOT_GRAPHEME_CLUSTERING)
@@ -757,6 +758,7 @@ action_utf8_print(struct terminal *term, char32_t wc)
         if (base_width > 0) {
             term->grid->cursor.point.col = col;
             term->grid->cursor.lcf = false;
+            insert_mode_disable = true;
 
             if (composed == NULL) {
                 bool base_from_primary;
@@ -954,7 +956,7 @@ action_utf8_print(struct terminal *term, char32_t wc)
 
 out:
     if (width > 0)
-        term_print(term, wc, width);
+        term_print(term, wc, width, insert_mode_disable);
 }
 
 static void
