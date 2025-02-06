@@ -1052,16 +1052,16 @@ grid_resize_and_reflow(
                      */
                     while (
                         unlikely(
-                            amount > 1 &&
+                            amount > 0 &&
                             from + amount < old_cols &&
                             old_row->cells[from + amount].wc >= CELL_SPACER + 1))
                     {
+                        spacers = old_row->cells[from + amount].wc - CELL_SPACER + 1;
                         amount--;
-                        spacers++;
                     }
 
                     xassert(
-                        amount == 1 ||
+                        amount <= 1 ||
                         old_row->cells[from + amount - 1].wc <= CELL_SPACER + 1);
                 }
 
@@ -1084,11 +1084,9 @@ grid_resize_and_reflow(
                 if (unlikely(spacers > 0)) {
                     xassert(new_col_idx + spacers == new_cols);
 
-                    const struct cell *cell = &old_row->cells[from - 1];
-
                     for (int i = 0; i < spacers; i++, new_col_idx++) {
                         new_row->cells[new_col_idx].wc = CELL_SPACER;
-                        new_row->cells[new_col_idx].attrs = cell->attrs;
+                        new_row->cells[new_col_idx].attrs = (struct attributes){0};
                     }
                 }
             }

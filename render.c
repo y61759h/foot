@@ -869,11 +869,16 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
             }
 
             if (grapheme != NULL) {
-                cell_cols = composed->width;
+                const int forced_width = composed->forced_width;
+
+                cell_cols = forced_width > 0 ? forced_width : composed->width;
 
                 composed = NULL;
                 glyphs = grapheme->glyphs;
                 glyph_count = grapheme->count;
+
+                if (forced_width > 0)
+                    glyph_count = min(glyph_count, forced_width);
             }
         }
 
@@ -890,7 +895,9 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
                 } else {
                     glyph_count = 1;
                     glyphs = &single;
-                    cell_cols = single->cols;
+
+                    const size_t forced_width = composed != NULL ? composed->forced_width : 0;
+                    cell_cols = forced_width > 0 ? forced_width : single->cols;
                 }
             }
         }
@@ -972,7 +979,7 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
         int g_x = glyph->x;
         int g_y = glyph->y;
 
-        if (i > 0 && glyph->x >= 0)
+        if (i > 0 && glyph->x >= 0 && cell_cols == 1)
             g_x -= term->cell_width;
 
         if (unlikely(pixman_image_get_format(glyph->pix) == PIXMAN_a8r8g8b8)) {
@@ -993,9 +1000,9 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
             if (composed != NULL) {
                 assert(glyph_count == 1);
 
-                for (size_t i = 1; i < composed->count; i++) {
+                for (size_t j = 1; j < composed->count; j++) {
                     const struct fcft_glyph *g = fcft_rasterize_char_utf32(
-                        font, composed->chars[i], term->font_subpixel);
+                        font, composed->chars[j], term->font_subpixel);
 
                     if (g == NULL)
                         continue;
@@ -1017,22 +1024,26 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
                      * somewhat deal with double-width glyphs we use
                      * an offset of *one* cell.
                      */
-                    int x_ofs = g->x < 0
-                        ? cell_cols * term->cell_width
-                        : (cell_cols - 1) * term->cell_width;
+                    int x_ofs = cell_cols == 1
+                        ? g->x < 0
+                            ? cell_cols * term->cell_width
+                            : (cell_cols - 1) * term->cell_width
+                        : 0;
+
+                    if (cell_cols > 1)
+                        pen_x += term->cell_width;
 
                     pixman_image_composite32(
                         PIXMAN_OP_OVER, clr_pix, g->pix, pix, 0, 0, 0, 0,
                         /* Some fonts use a negative offset, while others use a
                          * "normal" offset */
-                        pen_x + x_ofs + g->x,
-                        y + term->font_baseline - g->y,
-                        g->width, g->height);
+                        pen_x + letter_x_ofs + x_ofs + g->x,
+                        y + term->font_baseline - g->y, g->width, g->height);
                 }
             }
         }
 
-        pen_x += glyph->advance.x;
+        pen_x += cell_cols > 1 ? term->cell_width : glyph->advance.x;
     }
 
     pixman_image_unref(clr_pix);
@@ -4398,7 +4409,7 @@ render_resize(struct terminal *term, int width, int height, uint8_t opts)
     }
 
     /* Don't shrink grid too much */
-    const int min_cols = 2;
+    const int min_cols = 7;  /* See OSC-66 */
     const int min_rows = 1;
 
     /* Minimum window size (must be divisible by the scaling factor)*/

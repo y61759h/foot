@@ -894,6 +894,7 @@ void term_cursor_up(struct terminal *term, int count);
 void term_cursor_down(struct terminal *term, int count);
 void term_cursor_blink_update(struct terminal *term);
 
+void term_process_and_print_non_ascii(struct terminal *term, char32_t wc);
 void term_print(struct terminal *term, char32_t wc, int width,
                 bool insert_mode_disable);
 void term_fill(struct terminal *term, int row, int col, uint8_t c, size_t count,

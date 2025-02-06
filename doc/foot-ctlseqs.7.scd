@@ -729,7 +729,10 @@ All _OSC_ sequences begin with *\\E]*, sometimes abbreviated _OSC_.
 :  Copy _Pd_ (base64 encoded text) to the clipboard. _Pc_ denotes the
    target: *c* targets the clipboard and *s* and *p* the primary
    selection.
-|  \\E] 99 ; _params_ ; _payload_ \\E\\
+|  \\E] 66 ; _params_ ; text \\E\\ 
+:  kitty
+:  Text sizing protocol (only 'w', width, supported)
+|  \\E] 99 ; _params_ ; _payload_ \\E\\ 
 :  kitty
 :  Desktop notification; uses *desktop-notifications.command* in
    *foot.ini*(5).
