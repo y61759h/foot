@@ -3154,8 +3154,39 @@ dirty_cursor(struct terminal *term)
 }
 
 static void
+render_background_image(struct terminal *term) {
+    struct buffer_chain *chain = term->render.chains.background_image;
+    bool use_alpha = !term->window->is_fullscreen &&
+                     term->colors.alpha != 0xffff;
+    struct buffer *buf = shm_get_buffer(
+        chain, term->width, term->height, use_alpha);
+    int width = term->render.background_image.width;
+    int height = term->render.background_image.height;
+    int stride = width * sizeof(uint32_t);
+    pixman_image_t *t = pixman_image_create_bits_no_clear(
+        PIXMAN_a8r8g8b8, width, height, term->render.background_image.data, stride);
+    pixman_image_composite32(
+        PIXMAN_OP_SRC,   // 合成操作
+        t,              // 源图像
+        NULL,             // 遮罩图像（无）
+        buf->pix[0],             // 目标图像
+        0, 0,             // 源图像的起始坐标
+        0, 0,             // 遮罩图像的起始坐标
+        0, 0,           // 目标图像的起始坐标
+        width, height          // 合成区域的宽度和高度
+    );
+    // shm_addref(buf);
+    wayl_win_scale(term->window, buf);
+    wl_surface_attach(term->window->surface.surf, buf->wl_buf, 0, 0);
+    wl_surface_commit(term->window->surface.surf);
+}
+
+static void
 grid_render(struct terminal *term)
 {
+    if (1 != 1)
+        render_background_image(term);
+
     if (term->shutdown.in_progress)
         return;
 
@@ -3172,6 +3203,22 @@ grid_render(struct terminal *term)
                      term->colors.alpha != 0xffff;
     struct buffer *buf = shm_get_buffer(
         chain, term->width, term->height, use_alpha);
+
+    int w = term->render.background_image.width;
+    int h = term->render.background_image.height;
+    int stride = w * sizeof(uint32_t);
+    pixman_image_t *t = pixman_image_create_bits_no_clear(
+        PIXMAN_a8r8g8b8, w, h, term->render.background_image.data, stride);
+    pixman_image_composite32(
+        PIXMAN_OP_SRC,   // 合成操作
+        t,              // 源图像
+        NULL,             // 遮罩图像（无）
+        buf->pix[0],             // 目标图像
+        0, 0,             // 源图像的起始坐标
+        0, 0,             // 遮罩图像的起始坐标
+        0, 0,           // 目标图像的起始坐标
+        w, h          // 合成区域的宽度和高度
+    );
 
     /* Dirty old and current cursor cell, to ensure they're repainted */
     dirty_old_cursor(term);
@@ -4926,6 +4973,7 @@ fdm_hook_refresh_pending_terminals(struct fdm *fdm, void *data)
                 render_urls(term);
             if (grid | csd | search | urls)
                 grid_render(term);
+                    // render_background_image(term);
 
             tll_foreach(term->wl->seats, it) {
                 if (it->item.ime_focus == term)

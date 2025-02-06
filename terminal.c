@@ -1128,6 +1128,24 @@ load_fonts_from_conf(struct terminal *term)
     return reload_fonts(term, true);
 }
 
+uint32_t* load_background_image() {
+    const char *bg_image = "/home/fuck/Pictures/fuck.rgb";
+    FILE *fd = fopen(bg_image, "rb");
+    if (!fd) {
+        LOG_ERR("failed to open background_image");
+        exit(1);
+    }
+
+    int width = 1582;
+    int height = 989;
+    int num_pixels = width * height;
+    int num_bytes = num_pixels * 4; // 每个像素 4 字节（RGBA）
+    uint32_t *data = (uint32_t *)malloc(num_bytes);
+    fread(data, 1, num_bytes, fd);
+    fclose(fd);
+    return data;
+}
+
 static void fdm_client_terminated(
     struct reaper *reaper, pid_t pid, int status, void *data);
 
@@ -1314,7 +1332,13 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
         .tab_stops = tll_init(),
         .wl = wayl,
         .render = {
+            .background_image = {
+                .data = load_background_image(),
+                .width = 1582,
+                .height = 989,
+            },
             .chains = {
+                .background_image = shm_chain_new(wayl->shm, false, 1),
                 .grid = shm_chain_new(wayl->shm, true, 1 + conf->render_worker_count),
                 .search = shm_chain_new(wayl->shm, false, 1),
                 .scrollback_indicator = shm_chain_new(wayl->shm, false, 1),

@@ -645,6 +645,16 @@ struct terminal {
 
     struct {
         struct {
+            uint32_t *data;  /* Raw image data, in ARGB */
+            uint32_t *p;     /* Pointer into data, for current position */
+            int width;       /* Image width, in pixels */
+            int height;      /* Image height, in pixels */
+            int alloc_height;
+            unsigned int bottom_pixel;
+        } background_image;
+
+        struct {
+            struct buffer_chain *background_image;
             struct buffer_chain *grid;
             struct buffer_chain *search;
             struct buffer_chain *scrollback_indicator;
