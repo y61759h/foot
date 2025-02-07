@@ -1862,6 +1862,11 @@ wayl_win_init(struct terminal *term, const char *token)
     /* Complete XDG startup notification */
     wayl_activate(wayl, win, token);
 
+    if (!wayl_win_subsurface_new(win, &win->background_image, false)) {
+        LOG_ERR("failed to create background_image surface");
+        goto out;
+    }
+
     if (!wayl_win_subsurface_new(win, &win->overlay, false)) {
         LOG_ERR("failed to create overlay surface");
         goto out;

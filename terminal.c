@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <linux/input-event-codes.h>
 #include <xdg-shell.h>
+#include <png.h>
 
 #define LOG_MODULE "terminal"
 #define LOG_ENABLE_DBG 0
@@ -1128,22 +1129,90 @@ load_fonts_from_conf(struct terminal *term)
     return reload_fonts(term, true);
 }
 
-uint32_t* load_background_image() {
-    const char *bg_image = "/home/fuck/Pictures/fuck.rgb";
-    FILE *fd = fopen(bg_image, "rb");
-    if (!fd) {
-        LOG_ERR("failed to open background_image");
+static void
+load_background_image(struct terminal *term) {
+    FILE *fp = fopen(term->conf->image, "rb");
+    if (!fp) {
+        fprintf(stderr, "Could not open %s\n", term->conf->image);
         exit(1);
     }
 
-    int width = 1582;
-    int height = 989;
-    int num_pixels = width * height;
-    int num_bytes = num_pixels * 4; // 每个像素 4 字节（RGBA）
-    uint32_t *data = (uint32_t *)malloc(num_bytes);
-    fread(data, 1, num_bytes, fd);
-    fclose(fd);
-    return data;
+    png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png) {
+        fprintf(stderr, "Could not create PNG read struct\n");
+        exit(1);
+    }
+
+    png_infop info = png_create_info_struct(png);
+    if (!info) {
+        fprintf(stderr, "Could not create PNG info struct\n");
+        exit(1);
+    }
+
+    if (setjmp(png_jmpbuf(png))) {
+        fprintf(stderr, "Error during PNG read\n");
+        exit(1);
+    }
+
+    png_init_io(png, fp);
+    png_read_info(png, info);
+
+    int width = png_get_image_width(png, info);
+    int height = png_get_image_height(png, info);
+    png_byte color_type = png_get_color_type(png, info);
+    png_byte bit_depth = png_get_bit_depth(png, info);
+
+    if (bit_depth == 16)
+        png_set_strip_16(png);
+
+    if (color_type == PNG_COLOR_TYPE_PALETTE)
+        png_set_palette_to_rgb(png);
+
+    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+        png_set_expand_gray_1_2_4_to_8(png);
+
+    if (png_get_valid(png, info, PNG_INFO_tRNS))
+        png_set_tRNS_to_alpha(png);
+
+    if (color_type == PNG_COLOR_TYPE_RGB ||
+        color_type == PNG_COLOR_TYPE_GRAY ||
+        color_type == PNG_COLOR_TYPE_PALETTE)
+        png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
+
+    if (color_type == PNG_COLOR_TYPE_GRAY ||
+        color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+        png_set_gray_to_rgb(png);
+
+    png_read_update_info(png, info);
+
+    png_bytep *row_pointers = (png_bytep *)malloc(sizeof(png_bytep) * height);
+    for (int y = 0; y < height; y++) {
+        row_pointers[y] = (png_byte *)malloc(png_get_rowbytes(png, info));
+    }
+
+    png_read_image(png, row_pointers);
+
+    fclose(fp);
+
+    pixman_image_t *pixman_image = pixman_image_create_bits(PIXMAN_a8r8g8b8, width, height, NULL, 0);
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            png_bytep px = &(row_pointers[y][x * 4]);
+            uint32_t *dst = (uint32_t *)(pixman_image_get_data(pixman_image) + y * pixman_image_get_stride(pixman_image) / 4 + x);
+            *dst = (px[3] << 24) | (px[0] << 16) | (px[1] << 8) | px[2];
+        }
+    }
+
+    term->render.background_image.pit = pixman_image;
+    term->render.background_image.width = width;
+    term->render.background_image.height = height;
+
+    for (int y = 0; y < height; y++) {
+        free(row_pointers[y]);
+    }
+    free(row_pointers);
+
+    png_destroy_read_struct(&png, &info, NULL);
 }
 
 static void fdm_client_terminated(
@@ -1333,9 +1402,8 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
         .wl = wayl,
         .render = {
             .background_image = {
-                .data = load_background_image(),
-                .width = 1582,
-                .height = 989,
+                .width = 0,
+                .height = 0,
             },
             .chains = {
                 .background_image = shm_chain_new(wayl->shm, false, 1),
@@ -1388,6 +1456,8 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
 #endif
         .active_notifications = tll_init(),
     };
+
+    load_background_image(term);
 
     pixman_region32_init(&term->render.last_overlay_clip);
 

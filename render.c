@@ -3153,40 +3153,102 @@ dirty_cursor(struct terminal *term)
     row->dirty = true;
 }
 
+pixman_image_t* scale_and_crop_image(pixman_image_t *bg_image, int dest_width, int dest_height) {
+    // 获取源图像的尺寸
+    int src_width = pixman_image_get_width(bg_image);
+    int src_height = pixman_image_get_height(bg_image);
+
+    // 获取源图像的格式
+    pixman_format_code_t format = pixman_image_get_format(bg_image);
+
+    // 获取源图像的行跨度（stride）
+    int stride = pixman_image_get_stride(bg_image);
+
+    // 获取源图像的像素数据
+    uint8_t *src_data = (uint8_t *)pixman_image_get_data(bg_image);
+
+    // 创建目标图像
+    pixman_image_t *src_image = pixman_image_create_bits(format, src_width, src_height, NULL, stride);
+
+    // 获取目标图像的像素数据
+    uint8_t *dest_data = (uint8_t *)pixman_image_get_data(src_image);
+
+    // 复制像素数据
+    memcpy(dest_data, src_data, stride * src_height);
+
+    // 计算缩放比例
+    double scale_x = ceil (((double)dest_width / src_width) * 100 ) / 100;
+    double scale_y = ceil ( ((double)dest_height / src_height) * 100 ) / 100;
+    double scale = (scale_x > scale_y) ? scale_x : scale_y; // 选择较大的比例
+
+    // 计算缩放后的尺寸
+    int scaled_width = (int)(src_width * scale);
+    int scaled_height = (int)(src_height * scale);
+
+    // 创建缩放后的图像
+    pixman_image_t *scaled_image = pixman_image_create_bits(
+        PIXMAN_a8r8g8b8, scaled_width, scaled_height, NULL, -1);
+
+    // 缩放图像
+    double s_x = floor(((double)src_width / dest_width) * 100 ) / 100;
+    double s_y = floor( ((double)src_height / dest_height) * 100 ) / 100;
+    double s = (s_x < s_y) ? s_x : s_y; // 选择较小的比例
+    pixman_transform_t transform;
+    pixman_transform_init_scale(&transform, pixman_double_to_fixed(s), pixman_double_to_fixed(s));
+    pixman_image_set_transform(src_image, &transform);
+    pixman_image_set_filter(src_image, PIXMAN_FILTER_BILINEAR, NULL, 0);
+
+    // 将缩放后的图像绘制到目标图像
+    pixman_image_composite32(
+        PIXMAN_OP_SRC,
+        src_image, NULL, scaled_image,
+        0, 0, 0, 0, 0, 0,
+        scaled_width, scaled_height);
+
+    pixman_image_unref(src_image);
+
+    return scaled_image;
+}
+
 static void
 render_background_image(struct terminal *term) {
+    struct wayl_sub_surface *background_surface = &term->window->background_image;
+
     struct buffer_chain *chain = term->render.chains.background_image;
-    bool use_alpha = !term->window->is_fullscreen &&
-                     term->colors.alpha != 0xffff;
     struct buffer *buf = shm_get_buffer(
-        chain, term->width, term->height, use_alpha);
-    int width = term->render.background_image.width;
-    int height = term->render.background_image.height;
-    int stride = width * sizeof(uint32_t);
-    pixman_image_t *t = pixman_image_create_bits_no_clear(
-        PIXMAN_a8r8g8b8, width, height, term->render.background_image.data, stride);
+        chain, term->width, term->height, false);
+
+    // 缩放并裁剪图像
+    pixman_image_t *scale_image = scale_and_crop_image(term->render.background_image.pit, term->width, term->height);
+    int offset_x = (pixman_image_get_width(scale_image) - term->width) / 2;
+    int offset_y = (pixman_image_get_height(scale_image) - term->height) / 2;
     pixman_image_composite32(
-        PIXMAN_OP_SRC,   // 合成操作
-        t,              // 源图像
-        NULL,             // 遮罩图像（无）
-        buf->pix[0],             // 目标图像
-        0, 0,             // 源图像的起始坐标
-        0, 0,             // 遮罩图像的起始坐标
-        0, 0,           // 目标图像的起始坐标
-        width, height          // 合成区域的宽度和高度
+        PIXMAN_OP_SRC, // 合成操作
+        scale_image, // 源图像
+        NULL, // 遮罩图像（无）
+        buf->pix[0], // 目标图像
+        offset_x, offset_y, // 源图像的起始坐标
+        0, 0, // 遮罩图像的起始坐标
+        0, 0, // 目标图像的起始坐标
+        term->width, term->height // 合成区域的宽度和高度
     );
-    // shm_addref(buf);
-    wayl_win_scale(term->window, buf);
-    wl_surface_attach(term->window->surface.surf, buf->wl_buf, 0, 0);
-    wl_surface_commit(term->window->surface.surf);
+
+    wl_subsurface_set_position(background_surface->sub, 0, 0);
+    wl_subsurface_place_below(background_surface->sub, term->window->surface.surf);
+    wayl_surface_scale(term->window, &background_surface->surface, buf, term->scale);
+    wl_surface_attach(background_surface->surface.surf, buf->wl_buf, 0, 0);
+    wl_surface_commit(background_surface->surface.surf);
+
+    pixman_image_unref(scale_image);
+    if (term->render.background_image.last_buffer != NULL) {
+        shm_unref(term->render.background_image.last_buffer);
+        term->render.background_image.last_buffer = NULL;
+    }
 }
 
 static void
 grid_render(struct terminal *term)
 {
-    if (1 != 1)
-        render_background_image(term);
-
     if (term->shutdown.in_progress)
         return;
 
@@ -3204,21 +3266,6 @@ grid_render(struct terminal *term)
     struct buffer *buf = shm_get_buffer(
         chain, term->width, term->height, use_alpha);
 
-    int w = term->render.background_image.width;
-    int h = term->render.background_image.height;
-    int stride = w * sizeof(uint32_t);
-    pixman_image_t *t = pixman_image_create_bits_no_clear(
-        PIXMAN_a8r8g8b8, w, h, term->render.background_image.data, stride);
-    pixman_image_composite32(
-        PIXMAN_OP_SRC,   // 合成操作
-        t,              // 源图像
-        NULL,             // 遮罩图像（无）
-        buf->pix[0],             // 目标图像
-        0, 0,             // 源图像的起始坐标
-        0, 0,             // 遮罩图像的起始坐标
-        0, 0,           // 目标图像的起始坐标
-        w, h          // 合成区域的宽度和高度
-    );
 
     /* Dirty old and current cursor cell, to ensure they're repainted */
     dirty_old_cursor(term);
@@ -4798,6 +4845,8 @@ damage_view:
     render_refresh_search(term);
     render_refresh(term);
 
+    render_background_image(term);
+
     return true;
 }
 
@@ -4973,7 +5022,6 @@ fdm_hook_refresh_pending_terminals(struct fdm *fdm, void *data)
                 render_urls(term);
             if (grid | csd | search | urls)
                 grid_render(term);
-                    // render_background_image(term);
 
             tll_foreach(term->wl->seats, it) {
                 if (it->item.ime_focus == term)

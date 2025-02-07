@@ -645,12 +645,10 @@ struct terminal {
 
     struct {
         struct {
-            uint32_t *data;  /* Raw image data, in ARGB */
-            uint32_t *p;     /* Pointer into data, for current position */
-            int width;       /* Image width, in pixels */
-            int height;      /* Image height, in pixels */
-            int alloc_height;
-            unsigned int bottom_pixel;
+            pixman_image_t *pit;
+            struct buffer *last_buffer;
+            int width;
+            int height;
         } background_image;
 
         struct {
