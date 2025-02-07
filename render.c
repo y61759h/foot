@@ -3212,6 +3212,9 @@ pixman_image_t* scale_and_crop_image(pixman_image_t *bg_image, int dest_width, i
 
 static void
 render_background_image(struct terminal *term) {
+    if (term->render.background_image.pit == NULL)
+        return;
+
     struct wayl_sub_surface *background_surface = &term->window->background_image;
 
     struct buffer_chain *chain = term->render.chains.background_image;

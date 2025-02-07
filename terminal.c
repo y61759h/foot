@@ -1131,6 +1131,9 @@ load_fonts_from_conf(struct terminal *term)
 
 static void
 load_background_image(struct terminal *term) {
+    if (term->conf->image == NULL)
+        return;
+
     FILE *fp = fopen(term->conf->image, "rb");
     if (!fp) {
         fprintf(stderr, "Could not open %s\n", term->conf->image);
