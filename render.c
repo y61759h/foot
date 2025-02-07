@@ -750,7 +750,8 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
                  *
                  * NOTE: if changing this, also update render_margin()
                  */
-                xassert(alpha == 0xffff);
+                // xassert(alpha == 0xffff);
+                alpha = term->colors.alpha;
             } else {
                 alpha = term->colors.alpha;
             }
@@ -1150,7 +1151,8 @@ render_margin(struct terminal *term, struct buffer *buf,
 
     if (term->window->is_fullscreen) {
         /* Disable alpha in fullscreen - see render_cell() for details */
-        alpha = 0xffff;
+        // alpha = 0xffff;
+        alpha = term->colors.alpha;
     }
 
     pixman_color_t bg = color_hex_to_pixman_with_alpha(_bg, alpha);
@@ -3264,8 +3266,9 @@ grid_render(struct terminal *term)
     xassert(term->height > 0);
 
     struct buffer_chain *chain = term->render.chains.grid;
-    bool use_alpha = !term->window->is_fullscreen &&
-                     term->colors.alpha != 0xffff;
+    // bool use_alpha = !term->window->is_fullscreen &&
+    //                  term->colors.alpha != 0xffff;
+    bool use_alpha = term->colors.alpha != 0xffff;
     struct buffer *buf = shm_get_buffer(
         chain, term->width, term->height, use_alpha);
 
