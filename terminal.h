@@ -649,6 +649,8 @@ struct terminal {
             struct buffer *last_buffer;
             int width;
             int height;
+            int last_width;
+            int last_height;
         } background_image;
 
         struct {

@@ -909,8 +909,8 @@ parse_section_main(struct context *ctx)
     //         image_path = value;
     //     return value_to_str(ctx, &conf->image);
     // }
-    else if (streq(key, "image"))
-        return value_to_str(ctx, &conf->image);
+    else if (streq(key, "background-image"))
+        return value_to_str(ctx, &conf->background_image);
 
     else if (streq(key, "term"))
         return value_to_str(ctx, &conf->term);
@@ -3168,7 +3168,7 @@ config_load(struct config *conf, const char *conf_path,
         .shell = get_shell(),
         .title = xstrdup("foot"),
         .app_id = (as_server ? xstrdup("footclient") : xstrdup("foot")),
-        .image = NULL,
+        .background_image = NULL,
         .word_delimiters = xc32dup(U",│`|:\"'()[]{}<>"),
         .size = {
             .type = CONF_SIZE_PX,

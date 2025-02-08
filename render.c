@@ -3212,12 +3212,15 @@ pixman_image_t* scale_and_crop_image(pixman_image_t *bg_image, int dest_width, i
     return scaled_image;
 }
 
-static void
+static bool
 render_background_image(struct terminal *term) {
     if (term->render.background_image.pit == NULL)
-        return;
+        return false;
 
-    struct wayl_sub_surface *background_surface = &term->window->background_image;
+    if (term->render.background_image.last_width == term->width
+        && term->render.background_image.last_height == term->height) {
+        return false;
+    }
 
     struct buffer_chain *chain = term->render.chains.background_image;
     struct buffer *buf = shm_get_buffer(
@@ -3238,17 +3241,23 @@ render_background_image(struct terminal *term) {
         term->width, term->height // 合成区域的宽度和高度
     );
 
+    struct wayl_sub_surface *background_surface = &term->window->background_image;
     wl_subsurface_set_position(background_surface->sub, 0, 0);
     wl_subsurface_place_below(background_surface->sub, term->window->surface.surf);
     wayl_surface_scale(term->window, &background_surface->surface, buf, term->scale);
-    wl_surface_attach(background_surface->surface.surf, buf->wl_buf, 0, 0);
-    wl_surface_commit(background_surface->surface.surf);
+    // wl_surface_attach(background_surface->surface.surf, buf->wl_buf, 0, 0);
+    // wl_surface_commit(background_surface->surface.surf);
 
     pixman_image_unref(scale_image);
+
+    term->render.background_image.last_width = term->width;
+    term->render.background_image.last_height = term->height;
     if (term->render.background_image.last_buffer != NULL) {
         shm_unref(term->render.background_image.last_buffer);
-        term->render.background_image.last_buffer = NULL;
     }
+    term->render.background_image.last_buffer = buf;
+
+    return true;
 }
 
 static void
@@ -3602,6 +3611,11 @@ grid_render(struct terminal *term)
     if (term->conf->tweak.damage_whole_window) {
         wl_surface_damage_buffer(
             term->window->surface.surf, 0, 0, INT32_MAX, INT32_MAX);
+    }
+
+    if (render_background_image(term)) {
+        wl_surface_attach(term->window->background_image.surface.surf, term->render.background_image.last_buffer->wl_buf, 0, 0);
+        wl_surface_commit(term->window->background_image.surface.surf);
     }
 
     wl_surface_attach(term->window->surface.surf, buf->wl_buf, 0, 0);
@@ -4850,8 +4864,6 @@ damage_view:
     render_refresh_csd(term);
     render_refresh_search(term);
     render_refresh(term);
-
-    render_background_image(term);
 
     return true;
 }
