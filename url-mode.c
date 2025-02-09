@@ -368,7 +368,8 @@ regex_detected(const struct terminal *term, enum url_action action,
                         vline->sz = new_size;
                     }
 
-                    vline->utf8[vline->len + j] = buf[j];
+                    vline->utf8[vline->len + j] =
+                        (buf[j] == '\0') ? ' ' : buf[j];
                     vline->map[vline->len + j] = (struct coord){c, term->grid->view + r};
                 }
 
