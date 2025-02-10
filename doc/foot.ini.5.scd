@@ -806,7 +806,7 @@ commit hashes) could look like:
 
 ```
 [regex:hashes]
-regex=([a-fA-f0-9]{7,128})
+regex=([a-fA-F0-9]{7,128})
 launch=path-to-script-or-application ${match}
 
 [key-bindings]
@@ -1280,7 +1280,7 @@ e.g. *search-start=none*.
 	
 	```
 	[regex:hashes]
-	regex=([a-fA-f0-9]{7,128})
+	regex=([a-fA-F0-9]{7,128})
 	launch=path-to-script-or-application ${match}
 	
 	[key-bindings]
