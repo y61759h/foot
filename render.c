@@ -4409,7 +4409,7 @@ render_resize(struct terminal *term, int width, int height, uint8_t opts)
     }
 
     /* Don't shrink grid too much */
-    const int min_cols = 2;
+    const int min_cols = 1;
     const int min_rows = 1;
 
     /* Minimum window size (must be divisible by the scaling factor)*/
