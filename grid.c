@@ -1022,7 +1022,7 @@ grid_resize_and_reflow(
 
             new_row->cells[new_col_idx] = *old;
 
-            if (unlikely(uri_range != uri_range_terminator)) {
+            if (unlikely(uri_range != NULL && uri_range != uri_range_terminator)) {
                 if (uri_range->start == c) {
                     reflow_range_start(
                         uri_range, ROW_RANGE_URI, new_row, new_col_idx);
@@ -1036,7 +1036,7 @@ grid_resize_and_reflow(
                 }
             }
 
-            if (unlikely(underline_range != underline_range_terminator)) {
+            if (unlikely(underline_range != NULL && underline_range != underline_range_terminator)) {
                 if (underline_range->start == c) {
                     reflow_range_start(
                         underline_range, ROW_RANGE_UNDERLINE, new_row, new_col_idx);
