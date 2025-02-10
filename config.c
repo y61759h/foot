@@ -1327,7 +1327,7 @@ parse_section_regex(struct context *ctx)
     }
 
     else if (streq(key, "launch")) {
-        struct config_spawn_template launch;
+        struct config_spawn_template launch = {NULL};
         if (!value_to_spawn_template(ctx, &launch))
             return false;
 
