@@ -1068,17 +1068,11 @@ grid_resize_and_reflow(
                     }
                 }
 
-                if (unlikely(old_row->shell_integration.cmd_start >= 0 &&
-                             old_row->shell_integration.cmd_start == c))
-                {
+                if (unlikely(old_row->shell_integration.cmd_start == c))
                     new_row->shell_integration.cmd_start = new_col_idx;
-                }
 
-                if (unlikely(old_row->shell_integration.cmd_end >= 0 &&
-                             old_row->shell_integration.cmd_end == c))
-                {
+                if (unlikely(old_row->shell_integration.cmd_end == c))
                     new_row->shell_integration.cmd_end = new_col_idx;
-                }
 
                 if (unlikely(width > new_cols)) {
                     /* Wide character no longer fits on a row, replace
