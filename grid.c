@@ -16,6 +16,10 @@
 
 #define TIME_REFLOW 0
 
+#if defined(TIME_REFLOW)
+#include "misc.h"
+#endif
+
 /*
  * "sb" (scrollback relative) coordinates
  *
