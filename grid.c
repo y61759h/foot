@@ -984,7 +984,7 @@ grid_resize_and_reflow(
         } else
             underline_range = underline_range_terminator = NULL;
 
-        for (int c = 0; c < col_count; c++) {
+        for (int c = 0; c < col_count;) {
             const struct cell *old = &old_row->cells[c];
 
             /* Row full, emit newline and get a new, fresh, row */
@@ -1017,84 +1017,86 @@ grid_resize_and_reflow(
                 line_wrap();
             }
 
-            if (unlikely(c == 0))
-                new_row->shell_integration.prompt_marker = old_row->shell_integration.prompt_marker;
+            new_row->shell_integration.prompt_marker = old_row->shell_integration.prompt_marker;
 
-            new_row->cells[new_col_idx] = *old;
+            for (int i = 0; i < width; i++) {
+                if (unlikely(uri_range != NULL && uri_range != uri_range_terminator)) {
+                    if (unlikely(uri_range->start == c)) {
+                        reflow_range_start(
+                            uri_range, ROW_RANGE_URI, new_row, new_col_idx);
+                    }
 
-            if (unlikely(uri_range != NULL && uri_range != uri_range_terminator)) {
-                if (uri_range->start == c) {
-                    reflow_range_start(
-                        uri_range, ROW_RANGE_URI, new_row, new_col_idx);
+                    if (unlikely(uri_range->end == c)) {
+                        reflow_range_end(
+                            uri_range, ROW_RANGE_URI, new_row, new_col_idx);
+                        grid_row_uri_range_destroy(uri_range);
+                        uri_range++;
+                    }
                 }
 
-                if (uri_range->end == c) {
-                    reflow_range_end(
-                        uri_range, ROW_RANGE_URI, new_row, new_col_idx);
-                    grid_row_uri_range_destroy(uri_range);
-                    uri_range++;
+                if (unlikely(underline_range != NULL && underline_range != underline_range_terminator)) {
+                    if (unlikely(underline_range->start == c)) {
+                        reflow_range_start(
+                            underline_range, ROW_RANGE_UNDERLINE, new_row, new_col_idx);
+                    }
+
+                    if (unlikely(underline_range->end == c)) {
+                        reflow_range_end(
+                            underline_range, ROW_RANGE_UNDERLINE, new_row, new_col_idx);
+                        grid_row_underline_range_destroy(underline_range);
+                        underline_range++;
+                    }
                 }
-            }
 
-            if (unlikely(underline_range != NULL && underline_range != underline_range_terminator)) {
-                if (underline_range->start == c) {
-                    reflow_range_start(
-                        underline_range, ROW_RANGE_UNDERLINE, new_row, new_col_idx);
+                if (unlikely(tp != NULL)) {
+                    if (unlikely(tp->col == c)) {
+                        do {
+                            xassert(tp->row == old_row_idx);
+
+                            tp->row = new_row_idx;
+                            tp->col = new_col_idx;
+
+                            next_tp++;
+                            tp = *next_tp;
+                        } while (tp->row == old_row_idx && tp->col == c);
+
+                        if (tp->row != old_row_idx)
+                            tp = NULL;
+
+                        LOG_DBG("next TP (tp=%p): %dx%d",
+                                (void*)tp, (*next_tp)->row, (*next_tp)->col);
+                    }
                 }
 
-                if (underline_range->end == c) {
-                    reflow_range_end(
-                        underline_range, ROW_RANGE_UNDERLINE, new_row, new_col_idx);
-                    grid_row_underline_range_destroy(underline_range);
-                    underline_range++;
-                }
-            }
-
-            if (unlikely(tp != NULL)) {
-                if (tp->col == c) {
-                    do {
-                        xassert(tp->row == old_row_idx);
-
-                        tp->row = new_row_idx;
-                        tp->col = new_col_idx;
-
-                        next_tp++;
-                        tp = *next_tp;
-                    } while (tp->row == old_row_idx && tp->col == c);
-
-                    if (tp->row != old_row_idx)
-                        tp = NULL;
-
-                    LOG_DBG("next TP (tp=%p): %dx%d",
-                            (void*)tp, (*next_tp)->row, (*next_tp)->col);
-                }
-            }
-
-            if (unlikely(old_row->shell_integration.cmd_start >= 0)) {
-                if (old_row->shell_integration.cmd_start == c) {
+                if (unlikely(old_row->shell_integration.cmd_start >= 0 &&
+                             old_row->shell_integration.cmd_start == c))
+                {
                     new_row->shell_integration.cmd_start = new_col_idx;
-                } else if (old_row->shell_integration.cmd_end == c) {
+                }
+
+                if (unlikely(old_row->shell_integration.cmd_end >= 0 &&
+                             old_row->shell_integration.cmd_end == c))
+                {
                     new_row->shell_integration.cmd_end = new_col_idx;
                 }
-            }
 
-            new_col_idx++;
-
-            if (unlikely(width > 1)) {
                 if (unlikely(width > new_cols)) {
                     /* Wide character no longer fits on a row, replace
                        it with a single space */
-                    new_row->cells[new_col_idx - 1].wc = 0;
+                    new_row->cells[new_col_idx++].wc = 0;
+                    c++;
 
                     /* Walk past the SPACER cells */
                     for (int i = 1; i < width; i++, c++, old++)
                         ;
-                } else {
-                    /* Copy spacers */
-                    xassert(new_col_idx + width - 1 <= new_cols);
-                    for (int i = 1; i < width; i++, c++)
-                        new_row->cells[new_col_idx++] = *(++old);
+
+                    /* Continue with next character in the *old* grid */
+                    break;
                 }
+
+                new_row->cells[new_col_idx++] = *old;
+                old++;
+                c++;
             }
         }
 
