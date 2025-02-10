@@ -388,10 +388,14 @@ regex_detected(const struct terminal *term, enum url_action action,
         }
     }
 
+    /* Terminate the last line, if necessary */
+    if (vline->len > 0 && vline->utf8[vline->len - 1] != '\0')
+        vline->utf8[vline->len++] = '\0';
+
     for (size_t i = 0; i < ALEN(vlines); i++) {
         const struct vline *v = &vlines[i];
         if (v->utf8 == NULL)
-            continue;;
+            continue;
 
         const char *search_string = v->utf8;
         while (true) {
