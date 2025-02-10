@@ -16,7 +16,7 @@ void grid_resize_without_reflow(
     int old_screen_rows, int new_screen_rows);
 
 void grid_resize_and_reflow(
-    struct grid *grid, int new_rows, int new_cols,
+    struct grid *grid, const struct terminal *term, int new_rows, int new_cols,
     int old_screen_rows, int new_screen_rows,
     size_t tracking_points_count,
     struct coord *const _tracking_points[static tracking_points_count]);

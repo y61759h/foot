@@ -816,7 +816,7 @@ tp_cmp(const void *_a, const void *_b)
 
 void
 grid_resize_and_reflow(
-    struct grid *grid, int new_rows, int new_cols,
+    struct grid *grid, const struct terminal *term, int new_rows, int new_cols,
     int old_screen_rows, int new_screen_rows,
     size_t tracking_points_count,
     struct coord *const _tracking_points[static tracking_points_count])
@@ -960,7 +960,7 @@ grid_resize_and_reflow(
         /* Does this row have any URIs? */
         struct row_range *uri_range, *uri_range_terminator;
         struct row_range *underline_range, *underline_range_terminator;
-        struct row_data *extra = old_row->extra;
+        const struct row_data *extra = old_row->extra;
 
         if (extra != NULL && extra->uri_ranges.count > 0) {
             uri_range = &extra->uri_ranges.v[0];
@@ -984,181 +984,118 @@ grid_resize_and_reflow(
         } else
             underline_range = underline_range_terminator = NULL;
 
-        for (int start = 0, left = col_count; left > 0;) {
-            int end;
-            bool tp_break = false;
-            bool uri_break = false;
-            bool underline_break = false;
-            bool ftcs_break = false;
+        for (int c = 0; c < col_count; c++) {
+            const struct cell *old = &old_row->cells[c];
 
-            /* Figure out where to end this chunk */
-            {
-                const int uri_col = uri_range != uri_range_terminator
-                    ? ((uri_range->start >= start ? uri_range->start : uri_range->end) + 1)
-                    : INT_MAX;
-                const int underline_col = underline_range != underline_range_terminator
-                    ? ((underline_range->start >= start ? underline_range->start : underline_range->end) + 1)
-                    : INT_MAX;
-                const int tp_col = tp != NULL ? tp->col + 1 : INT_MAX;
-                const int ftcs_col = old_row->shell_integration.cmd_start >= start
-                    ? old_row->shell_integration.cmd_start + 1
-                    : old_row->shell_integration.cmd_end >= start
-                    ? old_row->shell_integration.cmd_end + 1
-                    : INT_MAX;
+            /* Row full, emit newline and get a new, fresh, row */
+            xassert(new_col_idx <= new_cols);
+            if (unlikely(new_col_idx >= new_cols))
+                line_wrap();
 
-                end = min(col_count, min(min(tp_col, min(uri_col, underline_col)), ftcs_col));
+            char32_t wc = old->wc;
+            int width = 1;
 
-                uri_break = end == uri_col;
-                underline_break = end == underline_col;
-                tp_break = end == tp_col;
-                ftcs_break = end == ftcs_col;
+            if (unlikely(wc >= CELL_COMB_CHARS_LO && wc <= CELL_COMB_CHARS_HI)) {
+                const struct composed *composed =
+                    composed_lookup(term->composed, wc - CELL_COMB_CHARS_LO);
+
+                width = composed->forced_width > 0 ? composed->forced_width : composed->width;
+            } else if (unlikely(c + 1 < col_count && (old + 1)->wc >= CELL_SPACER + 1)) {
+                /* Wide character, get its width from the next cell's
+                   SPACER value */
+                width = (old + 1)->wc - CELL_SPACER + 1;
             }
-
-            int cols = end - start;
-            xassert(cols > 0);
-            xassert(start + cols <= old_cols);
 
             /*
-             * Copy the row chunk to the new grid. Note that there may
-             * be fewer cells left on the new row than what we have in
-             * the chunk. I.e. the chunk may have to be split up into
-             * multiple memcpy:ies.
-             */
-
-            for (int count = cols, from = start; count > 0;) {
-                xassert(new_col_idx <= new_cols);
-                int new_row_cells_left = new_cols - new_col_idx;
-
-                /* Row full, emit newline and get a new, fresh, row */
-                if (new_row_cells_left <= 0) {
-                    line_wrap();
-                    new_row_cells_left = new_cols;
+             * Check if character fits, if not, emit spacers, and push
+               the character to the next row */
+            if (unlikely(new_col_idx + width > new_cols && width <= new_cols)) {
+                for (; new_col_idx < new_cols; new_col_idx++) {
+                    new_row->cells[new_col_idx].wc = CELL_SPACER;
+                    new_row->cells[new_col_idx].attrs = (struct attributes){0};
                 }
-
-                /* Number of cells we can copy */
-                int amount = min(count, new_row_cells_left);
-                xassert(amount > 0);
-
-                /*
-                 * If we're going to reach the end of the new row, we
-                 * need to make sure we don't end in the middle of a
-                 * multi-column character.
-                 */
-                int spacers = 0;
-                if (new_col_idx + amount >= new_cols) {
-                    /*
-                     * While the cell *after* the last cell is a CELL_SPACER
-                     *
-                     * This means we have a multi-column character
-                     * that doesn't fit on the current row. We need to
-                     * push it to the next row, and insert CELL_SPACER
-                     * cells as padding.
-                     */
-                    while (
-                        unlikely(
-                            amount > 0 &&
-                            from + amount < old_cols &&
-                            old_row->cells[from + amount].wc >= CELL_SPACER + 1))
-                    {
-                        spacers = old_row->cells[from + amount].wc - CELL_SPACER + 1;
-                        amount--;
-                    }
-
-                    xassert(
-                        amount <= 1 ||
-                        old_row->cells[from + amount - 1].wc <= CELL_SPACER + 1);
-                }
-
-                xassert(new_col_idx + amount <= new_cols);
-                xassert(from + amount <= old_cols);
-
-                if (from == 0)
-                    new_row->shell_integration.prompt_marker = old_row->shell_integration.prompt_marker;
-
-                memcpy(
-                    &new_row->cells[new_col_idx], &old_row->cells[from],
-                    amount * sizeof(struct cell));
-
-                count -= amount;
-                from += amount;
-                new_col_idx += amount;
-
-                xassert(new_col_idx <= new_cols);
-
-                if (unlikely(spacers > 0)) {
-                    xassert(new_col_idx + spacers == new_cols);
-
-                    for (int i = 0; i < spacers; i++, new_col_idx++) {
-                        new_row->cells[new_col_idx].wc = CELL_SPACER;
-                        new_row->cells[new_col_idx].attrs = (struct attributes){0};
-                    }
-                }
+                line_wrap();
             }
 
-            xassert(new_col_idx > 0);
+            if (unlikely(c == 0))
+                new_row->shell_integration.prompt_marker = old_row->shell_integration.prompt_marker;
 
-            if (tp_break) {
-                do {
-                    xassert(tp != NULL);
-                    xassert(tp->row == old_row_idx);
-                    xassert(tp->col == end - 1);
+            new_row->cells[new_col_idx] = *old;
 
-                    tp->row = new_row_idx;
-                    tp->col = new_col_idx - 1;
-
-                    next_tp++;
-                    tp = *next_tp;
-                } while (tp->row == old_row_idx && tp->col == end - 1);
-
-                if (tp->row != old_row_idx)
-                    tp = NULL;
-
-                LOG_DBG("next TP (tp=%p): %dx%d",
-                        (void*)tp, (*next_tp)->row, (*next_tp)->col);
-            }
-
-            if (uri_break) {
-                xassert(uri_range != NULL);
-
-                if (uri_range->start == end - 1)
+            if (unlikely(uri_range != uri_range_terminator)) {
+                if (uri_range->start == c) {
                     reflow_range_start(
-                        uri_range, ROW_RANGE_URI, new_row, new_col_idx - 1);
+                        uri_range, ROW_RANGE_URI, new_row, new_col_idx);
+                }
 
-                if (uri_range->end == end - 1) {
+                if (uri_range->end == c) {
                     reflow_range_end(
-                        uri_range, ROW_RANGE_URI, new_row, new_col_idx - 1);
+                        uri_range, ROW_RANGE_URI, new_row, new_col_idx);
                     grid_row_uri_range_destroy(uri_range);
                     uri_range++;
                 }
             }
 
-            if (underline_break) {
-                xassert(underline_range != NULL);
-
-                if (underline_range->start == end - 1)
+            if (unlikely(underline_range != underline_range_terminator)) {
+                if (underline_range->start == c) {
                     reflow_range_start(
-                        underline_range, ROW_RANGE_UNDERLINE, new_row, new_col_idx - 1);
+                        underline_range, ROW_RANGE_UNDERLINE, new_row, new_col_idx);
+                }
 
-                if (underline_range->end == end - 1) {
+                if (underline_range->end == c) {
                     reflow_range_end(
-                        underline_range, ROW_RANGE_UNDERLINE, new_row, new_col_idx - 1);
+                        underline_range, ROW_RANGE_UNDERLINE, new_row, new_col_idx);
                     grid_row_underline_range_destroy(underline_range);
                     underline_range++;
                 }
             }
 
-            if (ftcs_break) {
-                xassert(old_row->shell_integration.cmd_start == start + cols - 1 ||
-                        old_row->shell_integration.cmd_end == start + cols - 1);
+            if (unlikely(tp != NULL)) {
+                if (tp->col == c) {
+                    do {
+                        xassert(tp->row == old_row_idx);
 
-                if (old_row->shell_integration.cmd_start == start + cols - 1)
-                    new_row->shell_integration.cmd_start = new_col_idx - 1;
-                if (old_row->shell_integration.cmd_end == start + cols - 1)
-                    new_row->shell_integration.cmd_end = new_col_idx - 1;
+                        tp->row = new_row_idx;
+                        tp->col = new_col_idx;
+
+                        next_tp++;
+                        tp = *next_tp;
+                    } while (tp->row == old_row_idx && tp->col == c);
+
+                    if (tp->row != old_row_idx)
+                        tp = NULL;
+
+                    LOG_DBG("next TP (tp=%p): %dx%d",
+                            (void*)tp, (*next_tp)->row, (*next_tp)->col);
+                }
             }
 
-            left -= cols;
-            start += cols;
+            if (unlikely(old_row->shell_integration.cmd_start >= 0)) {
+                if (old_row->shell_integration.cmd_start == c) {
+                    new_row->shell_integration.cmd_start = new_col_idx;
+                } else if (old_row->shell_integration.cmd_end == c) {
+                    new_row->shell_integration.cmd_end = new_col_idx;
+                }
+            }
+
+            new_col_idx++;
+
+            if (unlikely(width > 1)) {
+                if (unlikely(width > new_cols)) {
+                    /* Wide character no longer fits on a row, replace
+                       it with a single space */
+                    new_row->cells[new_col_idx - 1].wc = 0;
+
+                    /* Walk past the SPACER cells */
+                    for (int i = 1; i < width; i++, c++, old++)
+                        ;
+                } else {
+                    /* Copy spacers */
+                    xassert(new_col_idx + width - 1 <= new_cols);
+                    for (int i = 1; i < width; i++, c++)
+                        new_row->cells[new_col_idx++] = *(++old);
+                }
+            }
         }
 
         if (old_row->linebreak) {

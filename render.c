@@ -4190,7 +4190,7 @@ delayed_reflow_of_normal_grid(struct terminal *term)
     /* Reflow the original (since before the resize was started) grid,
      * to the *current* dimensions */
     grid_resize_and_reflow(
-        term->interactive_resizing.grid,
+        term->interactive_resizing.grid, term,
         term->interactive_resizing.new_rows, term->normal.num_cols,
         term->interactive_resizing.old_screen_rows, term->rows,
         term->selection.coords.end.row >= 0 ? ALEN(tracking_points) : 0,
@@ -4409,7 +4409,7 @@ render_resize(struct terminal *term, int width, int height, uint8_t opts)
     }
 
     /* Don't shrink grid too much */
-    const int min_cols = 7;  /* See OSC-66 */
+    const int min_cols = 2;
     const int min_rows = 1;
 
     /* Minimum window size (must be divisible by the scaling factor)*/
@@ -4691,7 +4691,7 @@ render_resize(struct terminal *term, int width, int height, uint8_t opts)
         };
 
         grid_resize_and_reflow(
-            &term->normal, new_normal_grid_rows, new_cols, old_normal_rows, new_rows,
+            &term->normal, term, new_normal_grid_rows, new_cols, old_normal_rows, new_rows,
             term->selection.coords.end.row >= 0 ? ALEN(tracking_points) : 0,
             tracking_points);
     }
