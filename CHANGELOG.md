@@ -110,10 +110,13 @@
 * Combining characters (including emojis consisting of multiple
   codepoints) not being handled correctly when _insert mode_ is
   enabled ([#1947][1947]).
+* Reflow of the cursor (active + saved) when at the end of the line
+  with a pending wrap (LCF set) ([#1954][1954]).
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 [1929]: https://codeberg.org/dnkl/foot/issues/1929
 [1947]: https://codeberg.org/dnkl/foot/issues/1947
+[1954]: https://codeberg.org/dnkl/foot/issues/1954
 
 
 ### Security

@@ -1211,14 +1211,25 @@ grid_resize_and_reflow(
     saved_cursor.row = min(saved_cursor.row, new_screen_rows - 1);
     saved_cursor.col = min(saved_cursor.col, new_cols - 1);
 
+    if (grid->cursor.lcf) {
+        if (cursor.col + 1 < new_cols) {
+            cursor.col++;
+            grid->cursor.lcf = false;
+        }
+    }
+
+    if (grid->saved_cursor.lcf) {
+        if (saved_cursor.col + 1 < new_cols) {
+            saved_cursor.col++;
+            grid->saved_cursor.lcf = false;
+        }
+    }
+
     grid->cur_row = new_grid[(grid->offset + cursor.row) & (new_rows - 1)];
     xassert(grid->cur_row != NULL);
 
     grid->cursor.point = cursor;
     grid->saved_cursor.point = saved_cursor;
-
-    grid->cursor.lcf = false;
-    grid->saved_cursor.lcf = false;
 
     /* Free sixels we failed to "map" to the new grid */
     tll_foreach(untranslated_sixels, it)
