@@ -1954,6 +1954,10 @@ term_destroy(struct terminal *term)
     tll_free(term->render.workers.queue);
 
     shm_unref(term->render.last_buf);
+    shm_unref(term->render.background_image.last_buffer);
+    pixman_image_unref(term->render.background_image.pit);
+
+    shm_chain_free(term->render.chains.background_image);
     shm_chain_free(term->render.chains.grid);
     shm_chain_free(term->render.chains.search);
     shm_chain_free(term->render.chains.scrollback_indicator);

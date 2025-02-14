@@ -3664,6 +3664,7 @@ config_free(struct config *conf)
     free(conf->shell);
     free(conf->title);
     free(conf->app_id);
+    free(conf->background_image);
     free(conf->word_delimiters);
     spawn_template_free(&conf->bell.command);
     free(conf->scrollback.indicator.text);
