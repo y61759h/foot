@@ -132,6 +132,7 @@ math = cc.find_library('m')
 threads = [dependency('threads'), cc.find_library('stdthreads', required: false)]
 libepoll = dependency('epoll-shim', required: false)
 pixman = dependency('pixman-1')
+libpng = dependency('libpng')
 wayland_protocols = dependency('wayland-protocols', version: '>=1.32',
                                fallback: 'wayland-protocols',
                                default_options: ['tests=false'])
@@ -323,7 +324,7 @@ executable(
   'wayland.c', 'wayland.h', 'shm-formats.h',
   wl_proto_src + wl_proto_headers, version,
   dependencies: [math, threads, libepoll, pixman, wayland_client, wayland_cursor, xkb, fontconfig, utf8proc,
-                 tllist, fcft],
+                 tllist, fcft, libpng],
   link_with: pgolib,
   install: true)
 

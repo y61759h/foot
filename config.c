@@ -892,6 +892,27 @@ parse_section_main(struct context *ctx)
         return ret;
     }
 
+    // else if (streq(key, "image")) {
+    //     char * _image_path = NULL;
+    //     const char *image_path = NULL;
+    //
+    //     if (value[0] == '~' && value[1] == '/') {
+    //         const char *home_dir = getenv("HOME");
+    //
+    //         if (home_dir == NULL) {
+    //             LOG_CONTEXTUAL_ERRNO("failed to expand '~'");
+    //             return false;
+    //         }
+    //
+    //         _image_path = xstrjoin3(home_dir, "/", value + 2);
+    //         image_path = _image_path;
+    //     } else
+    //         image_path = value;
+    //     return value_to_str(ctx, &conf->image);
+    // }
+    else if (streq(key, "background-image"))
+        return value_to_str(ctx, &conf->background_image);
+
     else if (streq(key, "term"))
         return value_to_str(ctx, &conf->term);
 
@@ -3268,6 +3289,7 @@ config_load(struct config *conf, const char *conf_path,
         .shell = get_shell(),
         .title = xstrdup("foot"),
         .app_id = (as_server ? xstrdup("footclient") : xstrdup("foot")),
+        .background_image = NULL,
         .word_delimiters = xc32dup(U",│`|:\"'()[]{}<>"),
         .size = {
             .type = CONF_SIZE_PX,
@@ -3805,6 +3827,7 @@ config_free(struct config *conf)
     free(conf->shell);
     free(conf->title);
     free(conf->app_id);
+    free(conf->background_image);
     free(conf->word_delimiters);
     spawn_template_free(&conf->bell.command);
     free(conf->scrollback.indicator.text);

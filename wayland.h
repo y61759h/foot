@@ -385,6 +385,7 @@ struct wl_window {
         bool minimize:1;
     } wm_capabilities;
 
+    struct wayl_sub_surface background_image;
     struct wayl_sub_surface search;
     struct wayl_sub_surface scrollback_indicator;
     struct wayl_sub_surface render_timer;
