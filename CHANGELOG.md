@@ -112,11 +112,15 @@
   enabled ([#1947][1947]).
 * Reflow of the cursor (active + saved) when at the end of the line
   with a pending wrap (LCF set) ([#1954][1954]).
+* Zero-width characters that also are grapheme breaks (e.g. U+200B,
+  ZERO WIDTH SPACE) being ignored (discarded and never stored in the
+  grid) ([#1960][1960]).
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 [1929]: https://codeberg.org/dnkl/foot/issues/1929
 [1947]: https://codeberg.org/dnkl/foot/issues/1947
 [1954]: https://codeberg.org/dnkl/foot/issues/1954
+[1960]: https://codeberg.org/dnkl/foot/issues/1960
 
 
 ### Security

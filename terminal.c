@@ -4153,7 +4153,7 @@ term_process_and_print_non_ascii(struct terminal *term, char32_t wc)
         if (grapheme_clustering) {
             /* Check if we're on a grapheme cluster break */
             if (utf8proc_grapheme_break_stateful(
-                    last, wc, &term->vt.grapheme_state))
+                    last, wc, &term->vt.grapheme_state) && width > 0)
             {
                 term_reset_grapheme_state(term);
                 goto out;
