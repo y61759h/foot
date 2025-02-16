@@ -58,8 +58,15 @@ empty string to be set, but it must be quoted: *KEY=""*)
 		- Dina:weight=bold:slant=italic
 		- Courier New:size=12
 		- Fantasque Sans Mono:fontfeatures=ss01
+		- Iosevka:fontfeatures=cv01=1:fontfeatures=cv06=1
 		- Meslo LG S:size=12, Noto Color Emoji:size=12
 		- Courier New:pixelsize=8
+	
+	Be aware that, depending on your setup, there may be global
+	FontConfig options that overrides options set here. If an option
+	appears to have no effect, ensure there is no global configuration
+	file that sets the same option with *assign* or *assign_replace*;
+	use one of the many *append* or possibly *prepend* modes.
 	
 	For each option, the first font is the primary font. The remaining
 	fonts are fallback fonts that will be used whenever a glyph cannot
