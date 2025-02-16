@@ -115,12 +115,14 @@
 * Zero-width characters that also are grapheme breaks (e.g. U+200B,
   ZERO WIDTH SPACE) being ignored (discarded and never stored in the
   grid) ([#1960][1960]).
+* `--server=<FD>` not working on FreeBSD ([#1956][1956]).
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 [1929]: https://codeberg.org/dnkl/foot/issues/1929
 [1947]: https://codeberg.org/dnkl/foot/issues/1947
 [1954]: https://codeberg.org/dnkl/foot/issues/1954
 [1960]: https://codeberg.org/dnkl/foot/issues/1960
+[1956]: https://codeberg.org/dnkl/foot/issues/1956
 
 
 ### Security
