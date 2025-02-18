@@ -116,6 +116,8 @@
   ZERO WIDTH SPACE) being ignored (discarded and never stored in the
   grid) ([#1960][1960]).
 * `--server=<FD>` not working on FreeBSD ([#1956][1956]).
+* Crash when resetting the terminal and an application had previously
+  set a custom app ID ([#1963][1963])
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 [1929]: https://codeberg.org/dnkl/foot/issues/1929
@@ -123,6 +125,7 @@
 [1954]: https://codeberg.org/dnkl/foot/issues/1954
 [1960]: https://codeberg.org/dnkl/foot/issues/1960
 [1956]: https://codeberg.org/dnkl/foot/issues/1956
+[1963]: https://codeberg.org/dnkl/foot/issues/1963
 
 
 ### Security

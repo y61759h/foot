@@ -3620,7 +3620,7 @@ term_set_app_id(struct terminal *term, const char *app_id)
         term->app_id = NULL;
     }
 
-    const size_t length = strlen(app_id);
+    const size_t length = app_id != NULL ? strlen(app_id) : 0;
     if (length > 2048) {
         /*
          * Not sure if there's a limit in the protocol, or the
