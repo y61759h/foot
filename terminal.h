@@ -88,7 +88,7 @@ struct range {
 
 struct cursor {
     struct coord point;
-    bool lcf;
+    bool lcf; /* Last Column Flag; https://github.com/mattiase/wraptest#basic-vt-line-wrapping-rules */
 };
 
 enum damage_type {DAMAGE_SCROLL, DAMAGE_SCROLL_REVERSE,
