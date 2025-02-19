@@ -1517,7 +1517,7 @@ parse_section_cursor(struct context *ctx)
 
         return value_to_enum(
             ctx,
-            (const char *[]){"block", "underline", "beam", NULL},
+            (const char *[]){"block", "underline", "beam", "hollow", NULL},
             (int *)&conf->cursor.style);
     }
 

@@ -842,8 +842,8 @@ applications can change these at runtime.
 
 *style*
 	Configures the default cursor style, and is one of: *block*,
-	*beam* or *underline*. Note that this can be overridden by
-	applications. Default: _block_.
+	*beam*, *underline* or *hollow*. Note that this can be overridden
+	by applications. Default: _block_.
 
 *unfocused-style*
 	Configures how the cursor is rendered when the terminal window is

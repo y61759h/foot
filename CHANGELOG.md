@@ -68,9 +68,11 @@
 * Support for custom regex matching ([#1386][1386],
   [#1872][1872])
 * Support for kitty's text-sizing protocol (`w`, width, only), OSC-66.
+* `cursor.style` can now be set to `hollow` ([#1965][1965]).
 
 [1386]: https://codeberg.org/dnkl/foot/issues/1386
 [1872]: https://codeberg.org/dnkl/foot/issues/1872
+[1965]: https://codeberg.org/dnkl/foot/issues/1965
 
 
 ### Changed

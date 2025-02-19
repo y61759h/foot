@@ -647,6 +647,11 @@ draw_cursor(const struct terminal *term, const struct cell *cell,
             draw_underline_cursor(term, pix, font, &cursor_color, x, y, cols);
         }
         break;
+
+    case CURSOR_HOLLOW:
+        if (likely(term->cursor_blink.state == CURSOR_BLINK_ON))
+            draw_hollow_block(term, pix, &cursor_color, x, y, cols);
+        break;
     }
 }
 

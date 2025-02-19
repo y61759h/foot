@@ -28,7 +28,7 @@ struct font_size_adjustment {
     float percent;
 };
 
-enum cursor_style { CURSOR_BLOCK, CURSOR_UNDERLINE, CURSOR_BEAM };
+enum cursor_style { CURSOR_BLOCK, CURSOR_UNDERLINE, CURSOR_BEAM, CURSOR_HOLLOW };
 enum cursor_unfocused_style {
     CURSOR_UNFOCUSED_UNCHANGED,
     CURSOR_UNFOCUSED_HOLLOW,
