@@ -164,6 +164,9 @@ struct config {
     enum { STARTUP_WINDOWED, STARTUP_MAXIMIZED, STARTUP_FULLSCREEN } startup_mode;
 
     bool dpi_aware;
+    enum {GAMMA_CORRECT_DISABLED,
+          GAMMA_CORRECT_ENABLED,
+          GAMMA_CORRECT_AUTO} gamma_correct;
     struct config_font_list fonts[4];
     struct font_size_adjustment font_size_adjustment;
 
@@ -397,6 +400,7 @@ struct config {
         bool box_drawing_solid_shades;
         bool font_monospace_warn;
         bool sixel;
+        enum { SHM_8_BIT, SHM_10_BIT } surface_bit_depth;
     } tweak;
 
     struct {

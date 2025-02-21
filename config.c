@@ -1107,6 +1107,28 @@ parse_section_main(struct context *ctx)
         return true;
     }
 
+    else if (streq(key, "gamma-correct-blending")) {
+        bool gamma_correct;
+        if (!value_to_bool(ctx, &gamma_correct))
+            return false;
+
+#if defined(HAVE_WP_COLOR_MANAGEMENT)
+        conf->gamma_correct =
+            gamma_correct
+                ? GAMMA_CORRECT_ENABLED
+                : GAMMA_CORRECT_DISABLED;
+        return true;
+#else
+        if (gamma_correct) {
+            LOG_CONTEXTUAL_WARN(
+                "ignoring; foot was built without color-management support");
+        }
+
+        conf->gamma_correct = GAMMA_CORRECT_DISABLED;
+        return true;
+#endif
+    }
+
     else {
         LOG_CONTEXTUAL_ERR("not a valid option: %s", key);
         return false;
@@ -2767,6 +2789,16 @@ parse_section_tweak(struct context *ctx)
     else if (streq(key, "bold-text-in-bright-amount"))
         return value_to_float(ctx, &conf->bold_in_bright.amount);
 
+    else if (streq(key, "surface-bit-depth")) {
+        _Static_assert(sizeof(conf->tweak.surface_bit_depth) == sizeof(int),
+            "enum is not 32-bit");
+
+        return value_to_enum(
+                ctx,
+                (const char *[]){"8-bit", "10-bit", NULL},
+                (int *)&conf->tweak.surface_bit_depth);
+    }
+
     else {
         LOG_CONTEXTUAL_ERR("not a valid option: %s", key);
         return false;
@@ -3300,6 +3332,11 @@ config_load(struct config *conf, const char *conf_path,
         .underline_thickness = {.pt = 0., .px = -1},
         .strikeout_thickness = {.pt = 0., .px = -1},
         .dpi_aware = false,
+#if defined(HAVE_WP_COLOR_MANAGEMENT)
+        .gamma_correct = GAMMA_CORRECT_AUTO,
+#else
+        .gamma_correct = GAMMA_CORRECT_DISABLED,
+#endif
         .security = {
             .osc52 = OSC52_ENABLED,
         },
@@ -3408,6 +3445,7 @@ config_load(struct config *conf, const char *conf_path,
             .box_drawing_solid_shades = true,
             .font_monospace_warn = true,
             .sixel = true,
+            .surface_bit_depth = 8,
         },
 
         .touch = {

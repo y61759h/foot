@@ -777,6 +777,10 @@ struct terminal {
 
         bool transparent_bg;
 
+        bool linear_blending;
+        bool use_10bit;
+        pixman_format_code_t pixman_fmt;
+
         /* Application configurable */
         unsigned palette_size;  /* Number of colors in palette */
         unsigned max_width;     /* Maximum image width, in pixels */

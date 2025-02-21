@@ -198,6 +198,35 @@ empty string to be set, but it must be quoted: *KEY=""*)
 
 	Default: _unset_
 
+*gamma-correct-blending*
+	Boolean. When enabled, foot will do gamma-correct blending in
+	linear color space. This is how font glyphs are supposed to be
+	rendered, but since nearly no applications or toolkits are doing
+	it on Linux, the result may not look like you are used to.
+	
+	Compared to the default (disabled), bright glyphs on a dark
+	background will appear thicker, and dark glyphs on a light
+	background will appear thinner.
+
+	Also be aware that many fonts have been developed on systems that
+	do not do gamma-correct blending, and may therefore look thicker
+	than intended when rendered with gamma-correct blending, since the
+	font designer set the font weight based on incorrect rendering.
+	
+	FreeType can limit the effect of the latter, with a technique
+	called stem darkening. It is only available for CFF fonts
+	(OpenType, .otf) and disabled by default (in FreeType). You can
+	enable it by setting the environment variable
+	*FREETYPE_PROPERTIES="cff:no-stem-darkening=0"* before starting
+	foot.
+	
+	You may also want to enable 10-bit image buffers when
+	gamma-correct blending is enabled. Though probably only if you do
+	not use a transparent background (with 10-bit buffers, you only
+	get 2 bits alpha). See *tweak.surface-bit-depth*.
+	
+	Default: enabled when compositor support is available
+
 *box-drawings-uses-font-glyphs*
 	Boolean. When disabled, foot generates box/line drawing characters
 	itself. The are several advantages to doing this instead of using
@@ -1916,6 +1945,23 @@ any of these options.
 	Amount by which bold fonts are brightened when
 	*bold-text-in-bright* is set to *yes* (the *palette-based* variant
 	is not affected by this option). Default: _1.3_.
+
+*surface-bit-depth*
+	Selects which RGB bit depth to use for image buffers. One of
+	*8-bit*, or *10-bit*.
+	
+	The default, *8-bit*, uses 8 bits for all channels, alpha
+	included. When *gamma-correct-blending* is disabled, this is the
+	best option.
+	
+	When *gamma-correct-blending* is enabled, you may want to enable
+	10-bit surfaces, as that improves the color resolution. Be aware
+	however, that in this mode, the alpha channel is only 2 bits
+	instead of 8 bits. Thus, if you are using a transparent
+	background, you may want to use the default, *8-bit*, even if you
+	have gamma-correct blending enabled.
+	
+	Default: _8-bit_
 
 # SEE ALSO
 

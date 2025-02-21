@@ -55,3 +55,12 @@ static inline bool feature_xdg_system_bell(void)
     return false;
 #endif
 }
+
+static inline bool feature_wp_color_management(void)
+{
+#if defined(HAVE_WP_COLOR_MANAGEMENT)
+    return true;
+#else
+    return false;
+#endif
+}

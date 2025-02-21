@@ -92,6 +92,12 @@ struct buffer_chain {
     struct wl_shm *shm;
     size_t pix_instances;
     bool scrollable;
+
+    pixman_format_code_t pixman_fmt_without_alpha;
+    enum wl_shm_format shm_format_without_alpha;
+
+    pixman_format_code_t pixman_fmt_with_alpha;
+    enum wl_shm_format shm_format_with_alpha;
 };
 
 static tll(struct buffer_private *) deferred;
@@ -115,6 +121,7 @@ buffer_destroy_dont_close(struct buffer *buf)
             if (buf->pix[i] != NULL)
                 pixman_image_unref(buf->pix[i]);
     }
+
     if (buf->wl_buf != NULL)
         wl_buffer_destroy(buf->wl_buf);
 
@@ -262,7 +269,9 @@ instantiate_offset(struct buffer_private *buf, off_t new_offset)
     wl_buf = wl_shm_pool_create_buffer(
         pool->wl_pool, new_offset,
         buf->public.width, buf->public.height, buf->public.stride,
-        buf->with_alpha ? WL_SHM_FORMAT_ARGB8888 : WL_SHM_FORMAT_XRGB8888);
+        buf->with_alpha
+            ? buf->chain->shm_format_with_alpha
+            : buf->chain->shm_format_without_alpha);
 
     if (wl_buf == NULL) {
         LOG_ERR("failed to create SHM buffer");
@@ -272,9 +281,12 @@ instantiate_offset(struct buffer_private *buf, off_t new_offset)
     /* One pixman image for each worker thread (do we really need multiple?) */
     for (size_t i = 0; i < buf->public.pix_instances; i++) {
         pix[i] = pixman_image_create_bits_no_clear(
-            buf->with_alpha ? PIXMAN_a8r8g8b8 : PIXMAN_x8r8g8b8,
+            buf->with_alpha
+                ? buf->chain->pixman_fmt_with_alpha
+                : buf->chain->pixman_fmt_without_alpha,
             buf->public.width, buf->public.height,
             (uint32_t *)mmapped, buf->public.stride);
+
         if (pix[i] == NULL) {
             LOG_ERR("failed to create pixman image");
             goto err;
@@ -959,14 +971,74 @@ shm_unref(struct buffer *_buf)
 }
 
 struct buffer_chain *
-shm_chain_new(struct wl_shm *shm, bool scrollable, size_t pix_instances)
+shm_chain_new(struct wayland *wayl, bool scrollable, size_t pix_instances,
+              bool ten_bit_if_capable)
 {
+    pixman_format_code_t pixman_fmt_without_alpha = PIXMAN_x8r8g8b8;
+    enum wl_shm_format shm_fmt_without_alpha = WL_SHM_FORMAT_XRGB8888;
+
+    pixman_format_code_t pixman_fmt_with_alpha = PIXMAN_a8r8g8b8;
+    enum wl_shm_format shm_fmt_with_alpha = WL_SHM_FORMAT_ARGB8888;
+
+    static bool have_logged = false;
+
+
+    if (ten_bit_if_capable) {
+        if (wayl->shm_have_argb2101010 && wayl->shm_have_xrgb2101010) {
+            pixman_fmt_without_alpha = PIXMAN_x2r10g10b10;
+            shm_fmt_without_alpha = WL_SHM_FORMAT_XRGB2101010;
+
+            pixman_fmt_with_alpha = PIXMAN_a2r10g10b10;
+            shm_fmt_with_alpha = WL_SHM_FORMAT_ARGB2101010;
+
+            if (!have_logged) {
+                have_logged = true;
+                LOG_INFO("using 10-bit RGB surfaces");
+            }
+        }
+
+        else if (wayl->shm_have_abgr2101010 && wayl->shm_have_xbgr2101010) {
+            pixman_fmt_without_alpha = PIXMAN_x2b10g10r10;
+            shm_fmt_without_alpha = WL_SHM_FORMAT_XBGR2101010;
+
+            pixman_fmt_with_alpha = PIXMAN_a2b10g10r10;
+            shm_fmt_with_alpha = WL_SHM_FORMAT_ABGR2101010;
+
+            if (!have_logged) {
+                have_logged = true;
+                LOG_INFO("using 10-bit BGR surfaces");
+            }
+        }
+
+        else {
+            if (!have_logged) {
+                have_logged = true;
+
+                LOG_WARN(
+                    "10-bit surfaces requested, but compositor does not "
+                    "implement ARGB2101010+XRGB2101010, or "
+                    "ABGR2101010+XBGR2101010. Falling back to 8-bit surfaces");
+            }
+        }
+    } else  {
+        if (!have_logged) {
+            have_logged = true;
+            LOG_INFO("using 8-bit RGB surfaces");
+        }
+    }
+
     struct buffer_chain *chain = xmalloc(sizeof(*chain));
     *chain = (struct buffer_chain){
         .bufs = tll_init(),
-        .shm = shm,
+        .shm = wayl->shm,
         .pix_instances = pix_instances,
         .scrollable = scrollable,
+
+        .pixman_fmt_without_alpha = pixman_fmt_without_alpha,
+        .shm_format_without_alpha = shm_fmt_without_alpha,
+
+        .pixman_fmt_with_alpha = pixman_fmt_with_alpha,
+        .shm_format_with_alpha = shm_fmt_with_alpha,
     };
     return chain;
 }

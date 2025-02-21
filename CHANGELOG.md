@@ -72,6 +72,11 @@
 * `search-bindings.delete-to-start` and
   `search-bindings.delete-to-end` key bindings, defaulting to
   `Control+u` and `Control+k` respectively ([#1972][1972]).
+* Gamma-correct font rendering. Requires compositor support
+  (`wp_color_management_v1`, and specifically, the `ext_linear`
+  transfer function). Enabled by default when compositor support is
+  available. Can be explicitly enabled or disabled with
+  `gamma-correct-blending=no|yes`.
 
 [1386]: https://codeberg.org/dnkl/foot/issues/1386
 [1872]: https://codeberg.org/dnkl/foot/issues/1872
@@ -87,6 +92,7 @@
 * Auto-detection of URLs (i.e. not OSC-8 based URLs) are now regex
   based.
 * Rename Tokyo Night Day theme to Tokyo Night Light and update colors.
+* fcft >= 3.2.0 is now required.
 
 [1925]: https://codeberg.org/dnkl/foot/issues/1925
 

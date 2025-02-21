@@ -28,6 +28,10 @@
  #include <xdg-system-bell-v1.h>
 #endif
 
+#if defined(HAVE_WP_COLOR_MANAGEMENT)
+ #include <color-management-v1.h>
+#endif
+
 #include <fcft/fcft.h>
 #include <tllist.h>
 
@@ -61,6 +65,9 @@ enum touch_state {
 struct wayl_surface {
     struct wl_surface *surf;
     struct wp_viewport *viewport;
+#if defined(HAVE_WP_COLOR_MANAGEMENT)
+    struct wp_color_management_surface_v1 *color_management;
+#endif
 };
 
 struct wayl_sub_surface {
@@ -459,6 +466,17 @@ struct wayland {
     struct xdg_system_bell_v1 *system_bell;
 #endif
 
+#if defined(HAVE_WP_COLOR_MANAGEMENT)
+    struct {
+        struct wp_color_manager_v1 *manager;
+        struct wp_image_description_v1 *img_description;
+        bool have_intent_perceptual;
+        bool have_feat_parametric;
+        bool have_tf_ext_linear;
+        bool have_primaries_srgb;
+    } color_management;
+#endif
+
     bool presentation_timings;
     struct wp_presentation *presentation;
     uint32_t presentation_clock_id;
@@ -474,6 +492,11 @@ struct wayland {
 
     /* WL_SHM >= 2 */
     bool use_shm_release;
+
+    bool shm_have_argb2101010:1;
+    bool shm_have_xrgb2101010:1;
+    bool shm_have_abgr2101010:1;
+    bool shm_have_xbgr2101010:1;
 };
 
 struct wayland *wayl_init(

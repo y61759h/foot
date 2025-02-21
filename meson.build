@@ -146,7 +146,7 @@ if utf8proc.found()
 endif
 
 tllist = dependency('tllist', version: '>=1.1.0', fallback: 'tllist')
-fcft = dependency('fcft', version: ['>=3.0.1', '<4.0.0'], fallback: 'fcft')
+fcft = dependency('fcft', version: ['>=3.2.0', '<4.0.0'], fallback: 'fcft')
 
 wayland_protocols_datadir = wayland_protocols.get_variable('pkgdatadir')
 
@@ -187,6 +187,13 @@ else
   xdg_system_bell = false
 endif
 
+if wayland_protocols.version().version_compare('>=1.41')
+  add_project_arguments('-DHAVE_WP_COLOR_MANAGEMENT', language: 'c')
+  wl_proto_xml += [wayland_protocols_datadir / 'staging/color-management/color-management-v1.xml']
+  wp_color_management = true
+else
+  wp_color_management = false
+endif
 
 foreach prot : wl_proto_xml
   wl_proto_headers += custom_target(
@@ -228,6 +235,13 @@ emoji_variation_sequences = custom_target(
   command: [python, generate_emoji_variation_sequences, '@INPUT@', '@OUTPUT@']
 )
 
+generate_srgb_funcs = files('scripts/srgb.py')
+srgb_funcs = custom_target(
+  'generate_srgb_funcs',
+  output: ['srgb.c', 'srgb.h'],
+  command: [python, generate_srgb_funcs, '@OUTPUT0@', '@OUTPUT1@']
+)
+
 common = static_library(
   'common',
   'log.c', 'log.h',
@@ -260,7 +274,7 @@ vtlib = static_library(
   'osc.c', 'osc.h',
   'sixel.c', 'sixel.h',
   'vt.c', 'vt.h',
-  builtin_terminfo, emoji_variation_sequences,
+  builtin_terminfo, emoji_variation_sequences, srgb_funcs,
   wl_proto_src + wl_proto_headers,
   version,
   dependencies: [libepoll, pixman, fcft, tllist, wayland_client, xkb, utf8proc],
@@ -424,6 +438,7 @@ summary(
     'Grapheme clustering': utf8proc.found(),
     'Wayland: xdg-toplevel-icon-v1': xdg_toplevel_icon,
     'Wayland: xdg-system-bell-v1': xdg_system_bell,
+    'Wayland: wp-color-management-v1': wp_color_management,
     'utmp backend': utmp_backend,
     'utmp helper default path': utmp_default_helper_path,
     'Build terminfo': tic.found(),

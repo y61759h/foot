@@ -991,6 +991,7 @@ struct font_load_data {
     const char **names;
     const char *attrs;
 
+    const struct fcft_font_options *options;
     struct fcft_font **font;
 };
 
@@ -998,7 +999,8 @@ static int
 font_loader_thread(void *_data)
 {
     struct font_load_data *data = _data;
-    *data->font = fcft_from_name(data->count, data->names, data->attrs);
+    *data->font = fcft_from_name2(
+        data->count, data->names, data->attrs, data->options);
     return *data->font != NULL;
 }
 
@@ -1065,14 +1067,32 @@ reload_fonts(struct terminal *term, bool resize_grid)
         [1] = xstrjoin(dpi, !custom_bold ? ":weight=bold" : ""),
         [2] = xstrjoin(dpi, !custom_italic ? ":slant=italic" : ""),
         [3] = xstrjoin(dpi, !custom_bold_italic ? ":weight=bold:slant=italic" : ""),
-    };
+        };
+
+    struct fcft_font_options *options = fcft_font_options_create();
+
+    options->color_glyphs.format = PIXMAN_a8r8g8b8;
+    options->color_glyphs.srgb_decode = render_do_linear_blending(term);
+
+    if (conf->tweak.surface_bit_depth == SHM_10_BIT) {
+        if ((term->wl->shm_have_argb2101010 && term->wl->shm_have_xrgb2101010) ||
+            (term->wl->shm_have_abgr2101010 && term->wl->shm_have_xbgr2101010))
+        {
+            /*
+             * Use a high-res buffer type for emojis. We don't want to
+             * use an a2r10g0b10 type of surface, since we need more
+             * than 2 bits for alpha.
+             */
+            options->color_glyphs.format = PIXMAN_rgba_float;
+        }
+    }
 
     struct fcft_font *fonts[4];
     struct font_load_data data[4] = {
-        {count_regular,     names_regular,     attrs[0], &fonts[0]},
-        {count_bold,        names_bold,        attrs[1], &fonts[1]},
-        {count_italic,      names_italic,      attrs[2], &fonts[2]},
-        {count_bold_italic, names_bold_italic, attrs[3], &fonts[3]},
+        {count_regular,     names_regular,     attrs[0], options, &fonts[0]},
+        {count_bold,        names_bold,        attrs[1], options, &fonts[1]},
+        {count_italic,      names_italic,      attrs[2], options, &fonts[2]},
+        {count_bold_italic, names_bold_italic, attrs[3], options, &fonts[3]},
     };
 
     thrd_t tids[4] = {0};
@@ -1096,6 +1116,8 @@ reload_fonts(struct terminal *term, bool resize_grid)
         } else
             success = false;
     }
+
+    fcft_font_options_destroy(options);
 
     for (size_t i = 0; i < 4; i++) {
         for (size_t j = 0; j < counts[i]; j++)
@@ -1237,6 +1259,8 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
         goto err;
     }
 
+    const bool ten_bit_surfaces = conf->tweak.surface_bit_depth == SHM_10_BIT;
+
     /* Initialize configure-based terminal attributes */
     *term = (struct terminal) {
         .fdm = fdm,
@@ -1320,13 +1344,14 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
         .wl = wayl,
         .render = {
             .chains = {
-                .grid = shm_chain_new(wayl->shm, true, 1 + conf->render_worker_count),
-                .search = shm_chain_new(wayl->shm, false, 1),
-                .scrollback_indicator = shm_chain_new(wayl->shm, false, 1),
-                .render_timer = shm_chain_new(wayl->shm, false, 1),
-                .url = shm_chain_new(wayl->shm, false, 1),
-                .csd = shm_chain_new(wayl->shm, false, 1),
-                .overlay = shm_chain_new(wayl->shm, false, 1),
+                .grid = shm_chain_new(wayl, true, 1 + conf->render_worker_count,
+                                      ten_bit_surfaces),
+                .search = shm_chain_new(wayl, false, 1 ,ten_bit_surfaces),
+                .scrollback_indicator = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
+                .render_timer = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
+                .url = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
+                .csd = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
+                .overlay = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
             },
             .scrollback_lines = conf->scrollback.lines,
             .app_sync_updates.timer_fd = app_sync_updates_fd,
@@ -1468,6 +1493,9 @@ term_window_configured(struct terminal *term)
     if (!term->shutdown.in_progress) {
         xassert(term->window->is_configured);
         fdm_add(term->fdm, term->ptmx, EPOLLIN, &fdm_ptmx, term);
+
+        const bool gamma_correct = render_do_linear_blending(term);
+        LOG_INFO("gamma-correct blending: %s", gamma_correct ? "enabled" : "disabled");
     }
 }
 
