@@ -1756,7 +1756,8 @@ csi_dispatch(struct terminal *term, uint8_t final)
 
             case 1:         /* blinking block */
             case 2:         /* steady block */
-                term->cursor_style = CURSOR_BLOCK;
+                term->cursor_style = term->conf->cursor.style == CURSOR_HOLLOW
+                    ? CURSOR_HOLLOW : CURSOR_BLOCK;
                 break;
 
             case 3:         /* blinking underline */
