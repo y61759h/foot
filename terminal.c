@@ -3191,7 +3191,6 @@ term_carriage_return(struct terminal *term)
 void
 term_linefeed(struct terminal *term)
 {
-    term->grid->cur_row->linebreak = true;
     term->grid->cursor.lcf = false;
 
     if (term->grid->cursor.point.row == term->scroll_region.end - 1)
