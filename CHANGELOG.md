@@ -69,10 +69,14 @@
   [#1872][1872])
 * Support for kitty's text-sizing protocol (`w`, width, only), OSC-66.
 * `cursor.style` can now be set to `hollow` ([#1965][1965]).
+* `search-bindings.delete-to-start` and
+  `search-bindings.delete-to-end` key bindings, defaulting to
+  `Control+u` and `Control+k` respectively ([#1972][1972]).
 
 [1386]: https://codeberg.org/dnkl/foot/issues/1386
 [1872]: https://codeberg.org/dnkl/foot/issues/1872
 [1965]: https://codeberg.org/dnkl/foot/issues/1965
+[1972]: https://codeberg.org/dnkl/foot/issues/1972
 
 
 ### Changed
