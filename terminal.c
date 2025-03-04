@@ -2860,6 +2860,8 @@ term_cursor_to(struct terminal *term, int row, int col)
     term->grid->cursor.point.col = col;
     term->grid->cursor.point.row = row;
 
+    term_reset_grapheme_state(term);
+
     term->grid->cur_row = grid_row(term->grid, row);
 }
 
@@ -2876,6 +2878,7 @@ term_cursor_col(struct terminal *term, int col)
 
     term->grid->cursor.lcf = false;
     term->grid->cursor.point.col = col;
+    term_reset_grapheme_state(term);
 }
 
 void
@@ -2885,6 +2888,7 @@ term_cursor_left(struct terminal *term, int count)
     term->grid->cursor.point.col -= move_amount;
     xassert(term->grid->cursor.point.col >= 0);
     term->grid->cursor.lcf = false;
+    term_reset_grapheme_state(term);
 }
 
 void
@@ -2894,6 +2898,7 @@ term_cursor_right(struct terminal *term, int count)
     term->grid->cursor.point.col += move_amount;
     xassert(term->grid->cursor.point.col < term->cols);
     term->grid->cursor.lcf = false;
+    term_reset_grapheme_state(term);
 }
 
 void
@@ -3165,6 +3170,8 @@ term_linefeed(struct terminal *term)
         term_scroll(term, 1);
     else
         term_cursor_down(term, 1);
+
+    term_reset_grapheme_state(term);
 }
 
 void

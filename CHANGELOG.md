@@ -120,6 +120,7 @@
 * `--server=<FD>` not working on FreeBSD ([#1956][1956]).
 * Crash when resetting the terminal and an application had previously
   set a custom app ID ([#1963][1963])
+* Grapheme clustering state not reset on cursor movements.
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 [1929]: https://codeberg.org/dnkl/foot/issues/1929
