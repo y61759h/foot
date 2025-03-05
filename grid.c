@@ -501,7 +501,6 @@ grid_resize_without_reflow(
                sizeof(struct cell) * min(old_cols, new_cols));
 
         new_row->dirty = old_row->dirty;
-        new_row->linebreak = false;
         new_row->shell_integration.prompt_marker = old_row->shell_integration.prompt_marker;
         new_row->shell_integration.cmd_start = min(old_row->shell_integration.cmd_start, new_cols - 1);
         new_row->shell_integration.cmd_end = min(old_row->shell_integration.cmd_end, new_cols - 1);
@@ -709,20 +708,12 @@ _line_wrap(struct grid *old_grid, struct row **new_grid, struct row *row,
         /* Scrollback not yet full, allocate a completely new row */
         new_row = grid_row_alloc(col_count, false);
         new_grid[*row_idx] = new_row;
-
-        /* *clear* linebreak, since we only want to set it when we
-            reach the end of an old row, with linebreak=true */
-        new_row->linebreak = false;
     } else {
         /* Scrollback is full, need to reuse a row */
         grid_row_reset_extra(new_row);
         new_row->shell_integration.prompt_marker = false;
         new_row->shell_integration.cmd_start = -1;
         new_row->shell_integration.cmd_end = -1;
-
-        /* *clear* linebreak, since we only want to set it when we
-            reach the end of an old row, with linebreak=true */
-        new_row->linebreak = false;
 
         tll_foreach(old_grid->sixel_images, it) {
             if (it->item.pos.row == *row_idx) {
@@ -1112,6 +1103,17 @@ grid_resize_and_reflow(
                 }
 
                 new_row->cells[new_col_idx++] = *old;
+
+                /*
+                 * TODO: simulate LCF instead?
+                 *
+                 * Rows have linebreak=true by default. This is needed
+                 * for a number of reasons. However, we want non-empty
+                 * rows to have linebreak=false, *until* we reach the
+                 * end of an old row with linebreak=true, at which
+                 * point we set linebreak=true on the new row.
+                 */
+                new_row->linebreak = false;
                 old++;
                 c++;
             }
