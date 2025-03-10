@@ -1411,7 +1411,7 @@ emit_escapes:
     size_t left = sizeof(buf);
     size_t bytes;
 
-    const int key = unshifted > 0 && isc32print(unshifted) ? unshifted : shifted;
+    const int key = unshifted > 0 && isc32print(unshifted) && !composed ? unshifted : shifted;
     const int alternate = shifted;
 
     if (final == 'u' || final == '~') {
