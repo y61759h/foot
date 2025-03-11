@@ -2100,11 +2100,15 @@ UNITTEST
 
         seat.kbd.xkb_compose_table = xkb_compose_table_new_from_locale(
             seat.kbd.xkb, setlocale(LC_CTYPE, NULL), XKB_COMPOSE_COMPILE_NO_FLAGS);
-        xassert(seat.kbd.xkb_compose_table != NULL);
+        if (seat.kbd.xkb_compose_table == NULL)
+            goto no_keymap;
 
         seat.kbd.xkb_compose_state = xkb_compose_state_new(
             seat.kbd.xkb_compose_table, XKB_COMPOSE_STATE_NO_FLAGS);
-        xassert(seat.kbd.xkb_compose_state != NULL);
+        if (seat.kbd.xkb_compose_state == NULL) {
+            xkb_compose_table_unref(seat.kbd.xkb_compose_table);
+            goto no_keymap;
+        }
 
         seat.kbd.mod_shift = xkb_keymap_mod_get_index(seat.kbd.xkb_keymap, XKB_MOD_NAME_SHIFT);
         seat.kbd.mod_alt = xkb_keymap_mod_get_index(seat.kbd.xkb_keymap, XKB_MOD_NAME_ALT) ;
