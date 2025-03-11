@@ -2087,6 +2087,103 @@ UNITTEST
         seat.kbd.xkb_keymap = NULL;
     }
 
+    /* us(intl) keymap */
+    {
+        seat.kbd.xkb_keymap = xkb_keymap_new_from_names(
+            seat.kbd.xkb, &(struct xkb_rule_names){.layout = "us", .variant = "intl"},
+            XKB_KEYMAP_COMPILE_NO_FLAGS);
+
+        if (seat.kbd.xkb_keymap == NULL) {
+            /* Skip test */
+            goto no_keymap;
+        }
+
+        seat.kbd.xkb_state = xkb_state_new(seat.kbd.xkb_keymap);
+        xassert(seat.kbd.xkb_state != NULL);
+
+        seat.kbd.xkb_compose_table = xkb_compose_table_new_from_locale(
+            seat.kbd.xkb, setlocale(LC_CTYPE, NULL), XKB_COMPOSE_COMPILE_NO_FLAGS);
+        xassert(seat.kbd.xkb_compose_table != NULL);
+
+        seat.kbd.xkb_compose_state = xkb_compose_state_new(
+            seat.kbd.xkb_compose_table, XKB_COMPOSE_STATE_NO_FLAGS);
+        xassert(seat.kbd.xkb_compose_state != NULL);
+
+        seat.kbd.mod_shift = xkb_keymap_mod_get_index(seat.kbd.xkb_keymap, XKB_MOD_NAME_SHIFT);
+        seat.kbd.mod_alt = xkb_keymap_mod_get_index(seat.kbd.xkb_keymap, XKB_MOD_NAME_ALT) ;
+        seat.kbd.mod_ctrl = xkb_keymap_mod_get_index(seat.kbd.xkb_keymap, XKB_MOD_NAME_CTRL);
+        seat.kbd.mod_super = xkb_keymap_mod_get_index(seat.kbd.xkb_keymap, XKB_MOD_NAME_LOGO);
+        seat.kbd.mod_caps = xkb_keymap_mod_get_index(seat.kbd.xkb_keymap, XKB_MOD_NAME_CAPS);
+        seat.kbd.mod_num = xkb_keymap_mod_get_index(seat.kbd.xkb_keymap, XKB_MOD_NAME_NUM);
+
+        /* Significant modifiers in the legacy keyboard protocol */
+        seat.kbd.legacy_significant = 0;
+        if (seat.kbd.mod_shift != XKB_MOD_INVALID)
+            seat.kbd.legacy_significant |= 1 << seat.kbd.mod_shift;
+        if (seat.kbd.mod_alt != XKB_MOD_INVALID)
+            seat.kbd.legacy_significant |= 1 << seat.kbd.mod_alt;
+        if (seat.kbd.mod_ctrl != XKB_MOD_INVALID)
+            seat.kbd.legacy_significant |= 1 << seat.kbd.mod_ctrl;
+        if (seat.kbd.mod_super != XKB_MOD_INVALID)
+            seat.kbd.legacy_significant |= 1 << seat.kbd.mod_super;
+
+        /* Significant modifiers in the kitty keyboard protocol */
+        seat.kbd.kitty_significant = seat.kbd.legacy_significant;
+        if (seat.kbd.mod_caps != XKB_MOD_INVALID)
+            seat.kbd.kitty_significant |= 1 << seat.kbd.mod_caps;
+        if (seat.kbd.mod_num != XKB_MOD_INVALID)
+            seat.kbd.kitty_significant |= 1 << seat.kbd.mod_num;
+
+        key_binding_new_for_seat(key_binding_manager, &seat);
+        key_binding_load_keymap(key_binding_manager, &seat);
+
+        {
+            /*
+             * Test the compose sequence "shift+', shift+space"
+             *
+             * Should result in a double quote, but a regression
+             * caused it to instead emit a space. See #1987
+             *
+             * Note: "shift+', space" also results in a double quote,
+             * but never regressed to a space.
+             */
+            grid.kitty_kbd.flags[0] = KITTY_KBD_DISAMBIGUATE;
+            xkb_compose_state_reset(seat.kbd.xkb_compose_state);
+
+            xkb_mod_mask_t mods = 1u << seat.kbd.mod_shift;
+            keyboard_modifiers(&seat, NULL, 1337, mods, 0, 0, 1);
+
+            key_press_release(&seat, &term, 1337, KEY_APOSTROPHE + 8, WL_KEYBOARD_KEY_STATE_PRESSED);
+            key_press_release(&seat, &term, 1337, KEY_APOSTROPHE + 8, WL_KEYBOARD_KEY_STATE_RELEASED);
+
+            key_press_release(&seat, &term, 1337, KEY_SPACE + 8, WL_KEYBOARD_KEY_STATE_PRESSED);
+
+            char escape[64] = {0};
+            ssize_t count = read(chan[0], escape, sizeof(escape));
+
+            /* key: 34 = '"', alternate: N/A, base: N/A, mods: 2 = shift */
+            const char expected_shift_apostrophe[] = "\033[34;2u";
+            xassert(count == strlen(expected_shift_apostrophe));
+            xassert(streq(escape, expected_shift_apostrophe));
+
+            key_press_release(&seat, &term, 1337, KEY_SPACE + 8, WL_KEYBOARD_KEY_STATE_RELEASED);
+
+            grid.kitty_kbd.flags[0] = KITTY_KBD_DISAMBIGUATE | KITTY_KBD_REPORT_ALTERNATE;
+        }
+
+        key_binding_unload_keymap(key_binding_manager, &seat);
+        key_binding_remove_seat(key_binding_manager, &seat);
+
+        xkb_compose_state_unref(seat.kbd.xkb_compose_state);
+        xkb_compose_table_unref(seat.kbd.xkb_compose_table);
+
+        xkb_state_unref(seat.kbd.xkb_state);
+        xkb_keymap_unref(seat.kbd.xkb_keymap);
+
+        seat.kbd.xkb_state = NULL;
+        seat.kbd.xkb_keymap = NULL;
+    }
+
 no_keymap:
     xkb_context_unref(seat.kbd.xkb);
     key_binding_manager_destroy(key_binding_manager);
