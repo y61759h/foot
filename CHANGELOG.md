@@ -137,6 +137,8 @@
 * Crash when resetting the terminal and an application had previously
   set a custom app ID ([#1963][1963])
 * Grapheme clustering state not reset on cursor movements.
+* Kitty keyboard protocol: no release events emitted for composed
+  keys.
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 [1929]: https://codeberg.org/dnkl/foot/issues/1929
