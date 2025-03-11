@@ -1157,9 +1157,6 @@ kitty_kbd_protocol(struct seat *seat, struct terminal *term,
     if (!report_events && released)
         return false;
 
-    if (composed && released)
-        return false;
-
     /* TODO: should we even bother with this, or just say it's not supported? */
     if (!disambiguate && !report_all_as_escapes && pressed)
         return legacy_kbd_protocol(seat, term, ctx);
