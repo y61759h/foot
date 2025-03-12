@@ -22,10 +22,7 @@
 #include <presentation-time.h>
 #include <wayland-cursor.h>
 #include <xdg-shell.h>
-
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
 #include <xdg-toplevel-icon-v1.h>
-#endif
 
 #include <fcft/fcft.h>
 
@@ -5092,7 +5089,6 @@ render_refresh_app_id(struct terminal *term)
 void
 render_refresh_icon(struct terminal *term)
 {
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     if (term->wl->toplevel_icon_manager == NULL) {
         LOG_DBG("compositor does not implement xdg-toplevel-icon: "
                 "ignoring request to refresh window icon");
@@ -5126,7 +5122,6 @@ render_refresh_icon(struct terminal *term)
     xdg_toplevel_icon_v1_destroy(icon);
 
     term->render.icon.last_update = now;
-#endif
 }
 
 void
@@ -5232,10 +5227,6 @@ render_xcursor_set(struct seat *seat, struct terminal *term,
 bool
 render_do_linear_blending(const struct terminal *term)
 {
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
     return term->conf->gamma_correct != GAMMA_CORRECT_DISABLED &&
            term->wl->color_management.img_description != NULL;
-#else
-    return false;
-#endif
 }

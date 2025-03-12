@@ -37,30 +37,3 @@ static inline bool feature_graphemes(void)
     return false;
 #endif
 }
-
-static inline bool feature_xdg_toplevel_icon(void)
-{
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
-    return true;
-#else
-    return false;
-#endif
-}
-
-static inline bool feature_xdg_system_bell(void)
-{
-#if defined(HAVE_XDG_SYSTEM_BELL)
-    return true;
-#else
-    return false;
-#endif
-}
-
-static inline bool feature_wp_color_management(void)
-{
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
-    return true;
-#else
-    return false;
-#endif
-}

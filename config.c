@@ -1112,21 +1112,11 @@ parse_section_main(struct context *ctx)
         if (!value_to_bool(ctx, &gamma_correct))
             return false;
 
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
         conf->gamma_correct =
             gamma_correct
                 ? GAMMA_CORRECT_ENABLED
                 : GAMMA_CORRECT_DISABLED;
         return true;
-#else
-        if (gamma_correct) {
-            LOG_CONTEXTUAL_WARN(
-                "ignoring; foot was built without color-management support");
-        }
-
-        conf->gamma_correct = GAMMA_CORRECT_DISABLED;
-        return true;
-#endif
     }
 
     else {
@@ -3339,11 +3329,7 @@ config_load(struct config *conf, const char *conf_path,
         .underline_thickness = {.pt = 0., .px = -1},
         .strikeout_thickness = {.pt = 0., .px = -1},
         .dpi_aware = false,
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
         .gamma_correct = GAMMA_CORRECT_AUTO,
-#else
-        .gamma_correct = GAMMA_CORRECT_DISABLED,
-#endif
         .security = {
             .osc52 = OSC52_ENABLED,
         },

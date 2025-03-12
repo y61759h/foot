@@ -9,6 +9,7 @@
 #include <xkbcommon/xkbcommon.h>
 
 /* Wayland protocols */
+#include <color-management-v1.h>
 #include <fractional-scale-v1.h>
 #include <presentation-time.h>
 #include <primary-selection-unstable-v1.h>
@@ -19,18 +20,8 @@
 #include <xdg-decoration-unstable-v1.h>
 #include <xdg-output-unstable-v1.h>
 #include <xdg-shell.h>
-
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
- #include <xdg-toplevel-icon-v1.h>
-#endif
-
-#if defined(HAVE_XDG_SYSTEM_BELL)
- #include <xdg-system-bell-v1.h>
-#endif
-
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
- #include <color-management-v1.h>
-#endif
+#include <xdg-system-bell-v1.h>
+#include <xdg-toplevel-icon-v1.h>
 
 #include <fcft/fcft.h>
 #include <tllist.h>
@@ -65,9 +56,7 @@ enum touch_state {
 struct wayl_surface {
     struct wl_surface *surf;
     struct wp_viewport *viewport;
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
     struct wp_color_management_surface_v1 *color_management;
-#endif
 };
 
 struct wayl_sub_surface {
@@ -458,15 +447,10 @@ struct wayland {
 
     struct wp_single_pixel_buffer_manager_v1 *single_pixel_manager;
 
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     struct xdg_toplevel_icon_manager_v1 *toplevel_icon_manager;
-#endif
 
-#if defined(HAVE_XDG_SYSTEM_BELL)
     struct xdg_system_bell_v1 *system_bell;
-#endif
 
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
     struct {
         struct wp_color_manager_v1 *manager;
         struct wp_image_description_v1 *img_description;
@@ -475,7 +459,6 @@ struct wayland {
         bool have_tf_ext_linear;
         bool have_primaries_srgb;
     } color_management;
-#endif
 
     bool presentation_timings;
     struct wp_presentation *presentation;

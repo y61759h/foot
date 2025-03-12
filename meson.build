@@ -132,7 +132,7 @@ math = cc.find_library('m')
 threads = [dependency('threads'), cc.find_library('stdthreads', required: false)]
 libepoll = dependency('epoll-shim', required: false)
 pixman = dependency('pixman-1')
-wayland_protocols = dependency('wayland-protocols', version: '>=1.32',
+wayland_protocols = dependency('wayland-protocols', version: '>=1.41',
                                fallback: 'wayland-protocols',
                                default_options: ['tests=false'])
 wayland_client = dependency('wayland-client')
@@ -169,31 +169,10 @@ wl_proto_xml = [
   wayland_protocols_datadir / 'unstable/tablet/tablet-unstable-v2.xml',  # required by cursor-shape-v1
   wayland_protocols_datadir / 'staging/cursor-shape/cursor-shape-v1.xml',
   wayland_protocols_datadir / 'staging/single-pixel-buffer/single-pixel-buffer-v1.xml',
+  wayland_protocols_datadir / 'staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml',
+  wayland_protocols_datadir / 'staging/xdg-system-bell/xdg-system-bell-v1.xml',
+  wayland_protocols_datadir / 'staging/color-management/color-management-v1.xml',
   ]
-
-if wayland_protocols.version().version_compare('>=1.37')
-  add_project_arguments('-DHAVE_XDG_TOPLEVEL_ICON', language: 'c')
-  wl_proto_xml += [wayland_protocols_datadir / 'staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml']
-  xdg_toplevel_icon = true
-else
-  xdg_toplevel_icon = false
-endif
-
-if wayland_protocols.version().version_compare('>=1.38')
-  add_project_arguments('-DHAVE_XDG_SYSTEM_BELL', language: 'c')
-  wl_proto_xml += [wayland_protocols_datadir / 'staging/xdg-system-bell/xdg-system-bell-v1.xml']
-  xdg_system_bell = true
-else
-  xdg_system_bell = false
-endif
-
-if wayland_protocols.version().version_compare('>=1.41')
-  add_project_arguments('-DHAVE_WP_COLOR_MANAGEMENT', language: 'c')
-  wl_proto_xml += [wayland_protocols_datadir / 'staging/color-management/color-management-v1.xml']
-  wp_color_management = true
-else
-  wp_color_management = false
-endif
 
 foreach prot : wl_proto_xml
   wl_proto_headers += custom_target(
@@ -436,9 +415,6 @@ summary(
     'Themes': get_option('themes'),
     'IME': get_option('ime'),
     'Grapheme clustering': utf8proc.found(),
-    'Wayland: xdg-toplevel-icon-v1': xdg_toplevel_icon,
-    'Wayland: xdg-system-bell-v1': xdg_system_bell,
-    'Wayland: wp-color-management-v1': wp_color_management,
     'utmp backend': utmp_backend,
     'utmp helper default path': utmp_default_helper_path,
     'Build terminfo': tic.found(),

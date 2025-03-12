@@ -101,6 +101,7 @@
   e.g. multi-line prompt input in fish is treated as separate lines,
   rather than one logical, when selecting and copying it
   ([#1487][1487]).
+* wayland-protocols >= 1.41 is now required.
 
 [1925]: https://codeberg.org/dnkl/foot/issues/1925
 [1487]: https://codeberg.org/dnkl/foot/issues/1487

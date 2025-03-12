@@ -675,8 +675,6 @@ static const struct wp_presentation_listener presentation_listener = {
     .clock_id = &clock_id,
 };
 
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
-
 static void
 color_manager_create_image_description(struct wayland *wayl)
 {
@@ -758,7 +756,6 @@ static const struct wp_color_manager_v1_listener color_manager_listener = {
     .supported_tf_named = &color_manager_supported_tf_named,
     .done = &color_manager_done,
 };
-#endif
 
 static bool
 verify_iface_version(const char *iface, uint32_t version, uint32_t wanted)
@@ -1457,7 +1454,6 @@ handle_global(void *data, struct wl_registry *registry,
             &wp_single_pixel_buffer_manager_v1_interface, required);
     }
 
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     else if (streq(interface, xdg_toplevel_icon_v1_interface.name)) {
         const uint32_t required = 1;
         if (!verify_iface_version(interface, version, required))
@@ -1466,9 +1462,7 @@ handle_global(void *data, struct wl_registry *registry,
         wayl->toplevel_icon_manager = wl_registry_bind(
             wayl->registry, name, &xdg_toplevel_icon_v1_interface, required);
     }
-#endif
 
-#if defined(HAVE_XDG_SYSTEM_BELL)
     else if (streq(interface, xdg_system_bell_v1_interface.name)) {
         const uint32_t required = 1;
         if (!verify_iface_version(interface, version, required))
@@ -1477,9 +1471,7 @@ handle_global(void *data, struct wl_registry *registry,
         wayl->system_bell = wl_registry_bind(
             wayl->registry, name, &xdg_system_bell_v1_interface, required);
     }
-#endif
 
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
     else if (streq(interface, wp_color_manager_v1_interface.name)) {
         const uint32_t required = 1;
         if (!verify_iface_version(interface, version, required))
@@ -1491,7 +1483,6 @@ handle_global(void *data, struct wl_registry *registry,
         wp_color_manager_v1_add_listener(
             wayl->color_management.manager, &color_manager_listener, wayl);
     }
-#endif
 
 #if defined(FOOT_IME_ENABLED) && FOOT_IME_ENABLED
     else if (streq(interface, zwp_text_input_manager_v3_interface.name)) {
@@ -1733,11 +1724,9 @@ wayl_init(struct fdm *fdm, struct key_binding_manager *key_binding_manager,
                  "falling back to client-side cursors");
     }
 
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     if (wayl->toplevel_icon_manager == NULL) {
         LOG_WARN("compositor does not implement the XDG toplevel icon protocol");
     }
-#endif
 
 #if defined(FOOT_IME_ENABLED) && FOOT_IME_ENABLED
     if (wayl->text_input_manager == NULL) {
@@ -1815,21 +1804,14 @@ wayl_destroy(struct wayland *wayl)
         zwp_text_input_manager_v3_destroy(wayl->text_input_manager);
 #endif
 
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
     if (wayl->color_management.img_description != NULL)
         wp_image_description_v1_destroy(wayl->color_management.img_description);
     if (wayl->color_management.manager != NULL)
         wp_color_manager_v1_destroy(wayl->color_management.manager);
-#endif
-
-#if defined(HAVE_XDG_SYSTEM_BELL)
     if (wayl->system_bell != NULL)
         xdg_system_bell_v1_destroy(wayl->system_bell);
-#endif
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     if (wayl->toplevel_icon_manager != NULL)
         xdg_toplevel_icon_manager_v1_destroy(wayl->toplevel_icon_manager);
-#endif
     if (wayl->single_pixel_manager != NULL)
         wp_single_pixel_buffer_manager_v1_destroy(wayl->single_pixel_manager);
     if (wayl->fractional_scale_manager != NULL)
@@ -1947,7 +1929,6 @@ wayl_win_init(struct terminal *term, const char *token)
 
     xdg_toplevel_set_app_id(win->xdg_toplevel, conf->app_id);
 
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     if (wayl->toplevel_icon_manager != NULL) {
         const char *app_id =
             term->app_id != NULL ? term->app_id : term->conf->app_id;
@@ -1960,9 +1941,7 @@ wayl_win_init(struct terminal *term, const char *token)
             wayl->toplevel_icon_manager, win->xdg_toplevel, icon);
         xdg_toplevel_icon_v1_destroy(icon);
     }
-#endif
 
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
     if (term->conf->gamma_correct != GAMMA_CORRECT_DISABLED) {
         if (wayl->color_management.img_description != NULL) {
             xassert(wayl->color_management.manager != NULL);
@@ -1992,7 +1971,6 @@ wayl_win_init(struct terminal *term, const char *token)
             /* "auto" - don't warn */
         }
     }
-#endif
 
     if (conf->csd.preferred == CONF_CSD_PREFER_NONE) {
         /* User specifically do *not* want decorations */
@@ -2136,11 +2114,8 @@ wayl_win_destroy(struct wl_window *win)
         tll_remove(win->xdg_tokens, it);
 }
 
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
     if (win->surface.color_management != NULL)
         wp_color_management_surface_v1_destroy(win->surface.color_management);
-#endif
-
     if (win->fractional_scale != NULL)
         wp_fractional_scale_v1_destroy(win->fractional_scale);
     if (win->surface.viewport != NULL)
@@ -2417,7 +2392,6 @@ wayl_win_set_urgent(struct wl_window *win)
 bool
 wayl_win_ring_bell(const struct wl_window *win)
 {
-#if defined(HAVE_XDG_SYSTEM_BELL)
     if (win->term->wl->system_bell == NULL) {
         static bool have_warned = false;
 
@@ -2431,9 +2405,6 @@ wayl_win_ring_bell(const struct wl_window *win)
 
     xdg_system_bell_v1_ring(win->term->wl->system_bell, win->surface.surf);
     return true;
-#else
-    return false;
-#endif
 }
 
 bool
@@ -2471,7 +2442,6 @@ wayl_win_subsurface_new_with_custom_parent(
         return false;
     }
 
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
     surf->surface.color_management = NULL;
     if (win->term->conf->gamma_correct &&
         wayl->color_management.img_description != NULL)
@@ -2485,7 +2455,6 @@ wayl_win_subsurface_new_with_custom_parent(
             surf->surface.color_management, wayl->color_management.img_description,
             WP_COLOR_MANAGER_V1_RENDER_INTENT_PERCEPTUAL);
     }
-#endif
 
     struct wl_subsurface *sub = wl_subcompositor_get_subsurface(
         wayl->sub_compositor, main_surface, parent);
@@ -2538,12 +2507,10 @@ wayl_win_subsurface_destroy(struct wayl_sub_surface *surf)
     if (surf == NULL)
         return;
 
-#if defined(HAVE_WP_COLOR_MANAGEMENT)
     if (surf->surface.color_management != NULL) {
         wp_color_management_surface_v1_destroy(surf->surface.color_management);
         surf->surface.color_management = NULL;
     }
-#endif
 
     if (surf->surface.viewport != NULL) {
         wp_viewport_destroy(surf->surface.viewport);
