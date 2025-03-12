@@ -93,6 +93,9 @@
   based.
 * Rename Tokyo Night Day theme to Tokyo Night Light and update colors.
 * fcft >= 3.3.0 is now required.
+  - `tweak.scaling-filter` now supports more scaling-filters
+  - scaled bitmap fonts (when enabled in FontConfig) no longer have a
+    scaling-filter applied
 * Linefeed:ing control characters (e.g. `\n`) no longer **clears** a
   row's internal linebreak flag. This fixes an issue where
   e.g. multi-line prompt input in fish is treated as separate lines,
