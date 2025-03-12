@@ -2677,8 +2677,15 @@ parse_section_tweak(struct context *ctx)
             [FCFT_SCALING_FILTER_NONE] = "none",
             [FCFT_SCALING_FILTER_NEAREST] = "nearest",
             [FCFT_SCALING_FILTER_BILINEAR] = "bilinear",
+
+            [FCFT_SCALING_FILTER_IMPULSE] = "impulse",
+            [FCFT_SCALING_FILTER_BOX] = "box",
+            [FCFT_SCALING_FILTER_LINEAR] = "linear",
             [FCFT_SCALING_FILTER_CUBIC] = "cubic",
+            [FCFT_SCALING_FILTER_GAUSSIAN] = "gaussian",
+            [FCFT_SCALING_FILTER_LANCZOS2] = "lanczos2",
             [FCFT_SCALING_FILTER_LANCZOS3] = "lanczos3",
+            [FCFT_SCALING_FILTER_LANCZOS3_STRETCHED] = "lanczos3-stretched",
             NULL,
         };
 

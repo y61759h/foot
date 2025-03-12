@@ -92,7 +92,7 @@
 * Auto-detection of URLs (i.e. not OSC-8 based URLs) are now regex
   based.
 * Rename Tokyo Night Day theme to Tokyo Night Light and update colors.
-* fcft >= 3.2.0 is now required.
+* fcft >= 3.3.0 is now required.
 * Linefeed:ing control characters (e.g. `\n`) no longer **clears** a
   row's internal linebreak flag. This fixes an issue where
   e.g. multi-line prompt input in fish is treated as separate lines,

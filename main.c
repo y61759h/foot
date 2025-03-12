@@ -518,7 +518,6 @@ main(int argc, char *const *argv)
         (enum fcft_log_colorize)log_colorize,
         as_server && log_syslog,
         (enum fcft_log_class)log_level);
-    fcft_set_scaling_filter(conf.tweak.fcft_filter);
 
     if (conf_server_socket_path != NULL) {
         free(conf.server_socket_path);

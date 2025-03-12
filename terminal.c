@@ -1071,6 +1071,7 @@ reload_fonts(struct terminal *term, bool resize_grid)
 
     struct fcft_font_options *options = fcft_font_options_create();
 
+    options->scaling_filter = conf->tweak.fcft_filter;
     options->color_glyphs.format = PIXMAN_a8r8g8b8;
     options->color_glyphs.srgb_decode = render_do_linear_blending(term);
 

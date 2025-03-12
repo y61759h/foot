@@ -1716,9 +1716,8 @@ any of these options.
 *scaling-filter*
 	Overrides the default scaling filter used when down-scaling bitmap
 	fonts (e.g. emoji fonts). Possible values are *none*, *nearest*,
-	*bilinear*, *cubic* or *lanczos3*. *cubic* and *lanczos3* produce
-	the best results, but are slower (with *lanczos3* being the best
-	_and_ slowest).
+	*bilinear*, *impulse*, *box*, *linear*, *cubic* *gaussian*,
+	*lanczos2*, *lanczos3* or *lanczos3-stretched*.
 	
 	Default: _lanczos3_.
 
