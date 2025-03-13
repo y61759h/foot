@@ -146,7 +146,7 @@ if utf8proc.found()
 endif
 
 tllist = dependency('tllist', version: '>=1.1.0', fallback: 'tllist')
-fcft = dependency('fcft', version: ['>=3.3.0', '<4.0.0'], fallback: 'fcft')
+fcft = dependency('fcft', version: ['>=3.3.1', '<4.0.0'], fallback: 'fcft')
 
 wayland_protocols_datadir = wayland_protocols.get_variable('pkgdatadir')
 

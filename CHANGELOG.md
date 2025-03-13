@@ -92,7 +92,7 @@
 * Auto-detection of URLs (i.e. not OSC-8 based URLs) are now regex
   based.
 * Rename Tokyo Night Day theme to Tokyo Night Light and update colors.
-* fcft >= 3.3.0 is now required.
+* fcft >= 3.3.1 is now required.
   - `tweak.scaling-filter` now supports more scaling-filters
   - scaled bitmap fonts (when enabled in FontConfig) no longer have a
     scaling-filter applied
