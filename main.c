@@ -31,7 +31,6 @@
 #include "shm.h"
 #include "terminal.h"
 #include "util.h"
-#include "version.h"
 #include "xmalloc.h"
 #include "xsnprintf.h"
 
@@ -44,20 +43,6 @@ fdm_sigint(struct fdm *fdm, int signo, void *data)
 {
     *(volatile sig_atomic_t *)data = true;
     return true;
-}
-
-static const char *
-version_and_features(void)
-{
-    static char buf[256];
-    snprintf(buf, sizeof(buf),
-             "version: %s %cpgo %cime %cgraphemes %cassertions",
-             FOOT_VERSION,
-             feature_pgo() ? '+' : '-',
-             feature_ime() ? '+' : '-',
-             feature_graphemes() ? '+' : '-',
-             feature_assertions() ? '+' : '-');
-    return buf;
 }
 
 static void
@@ -377,7 +362,7 @@ main(int argc, char *const *argv)
             break;
 
         case 'v':
-            printf("foot %s\n", version_and_features());
+            print_version_and_features("foot ");
             return EXIT_SUCCESS;
 
         case 'h':
@@ -405,7 +390,7 @@ main(int argc, char *const *argv)
         argv += optind;
     }
 
-    LOG_INFO("%s", version_and_features());
+    LOG_INFO("%s", version_and_features);
 
     {
         struct utsname name;

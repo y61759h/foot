@@ -295,7 +295,7 @@ executable(
   'commands.c', 'commands.h',
   'extract.c', 'extract.h',
   'fdm.c', 'fdm.h',
-  'foot-features.h',
+  'foot-features.c', 'foot-features.h',
   'ime.c', 'ime.h',
   'input.c', 'input.h',
   'key-binding.c', 'key-binding.h',
@@ -323,7 +323,7 @@ executable(
 executable(
   'footclient',
   'client.c', 'client-protocol.h',
-  'foot-features.h',
+  'foot-features.c', 'foot-features.h',
   'macros.h',
   'util.h',
   version,

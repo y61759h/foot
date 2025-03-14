@@ -22,7 +22,6 @@
 #include "foot-features.h"
 #include "macros.h"
 #include "util.h"
-#include "version.h"
 #include "xmalloc.h"
 
 extern char **environ;
@@ -60,20 +59,6 @@ sendall(int sock, const void *_buf, size_t len)
     }
 
     return len;
-}
-
-static const char *
-version_and_features(void)
-{
-    static char buf[256];
-    snprintf(buf, sizeof(buf),
-             "version: %s %cpgo %cime %cgraphemes %cassertions",
-             FOOT_VERSION,
-             feature_pgo() ? '+' : '-',
-             feature_ime() ? '+' : '-',
-             feature_graphemes() ? '+' : '-',
-             feature_assertions() ? '+' : '-');
-    return buf;
 }
 
 static void
@@ -328,7 +313,7 @@ main(int argc, char *const *argv)
             break;
 
         case 'v':
-            printf("footclient %s\n", version_and_features());
+            print_version_and_features("footclient ");
             ret = EXIT_SUCCESS;
             goto err;
 
