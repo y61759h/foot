@@ -143,6 +143,8 @@
 * Grapheme clustering state not reset on cursor movements.
 * Kitty keyboard protocol: no release events emitted for composed
   keys.
+* IME: the initial cursor position was reported as 0,0,0,0
+  ([#1994][1994]).
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 [1929]: https://codeberg.org/dnkl/foot/issues/1929
@@ -151,6 +153,7 @@
 [1960]: https://codeberg.org/dnkl/foot/issues/1960
 [1956]: https://codeberg.org/dnkl/foot/issues/1956
 [1963]: https://codeberg.org/dnkl/foot/issues/1963
+[1994]: https://codeberg.org/dnkl/foot/issues/1994
 
 
 ### Security
