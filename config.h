@@ -136,6 +136,7 @@ struct config {
     char *shell;
     char *title;
     char *app_id;
+    char *background_image;
     char32_t *word_delimiters;
     bool login_shell;
     bool locked_title;

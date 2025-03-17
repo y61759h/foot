@@ -645,6 +645,16 @@ struct terminal {
 
     struct {
         struct {
+            pixman_image_t *pit;
+            struct buffer *last_buffer;
+            int width;
+            int height;
+            int last_width;
+            int last_height;
+        } background_image;
+
+        struct {
+            struct buffer_chain *background_image;
             struct buffer_chain *grid;
             struct buffer_chain *search;
             struct buffer_chain *scrollback_indicator;
