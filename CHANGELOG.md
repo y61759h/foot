@@ -1,6 +1,6 @@
 # Changelog
 
-* [Unreleased](#unreleased)
+* [1.21.0](#1-21-0)
 * [1.20.2](#1-20-2)
 * [1.20.1](#1-20-1)
 * [1.20.0](#1-20-0)
@@ -58,7 +58,7 @@
 * [1.2.0](#1-2-0)
 
 
-## Unreleased
+## 1.21.0
 
 ### Added
 
@@ -107,7 +107,6 @@
 [1487]: https://codeberg.org/dnkl/foot/issues/1487
 
 
-### Deprecated
 ### Removed
 
 * `url.uri-characters` and `url.protocols`. Both options have been
@@ -158,8 +157,18 @@
 [1994]: https://codeberg.org/dnkl/foot/issues/1994
 
 
-### Security
 ### Contributors
+
+* Adrian fxj9a
+* Alexander Orzechowski
+* Attila Fidan
+* camel-cdr
+* Craig Barnes
+* Guillaume Outters
+* Johannes Altmanninger
+* Ludovico Gerardi
+* sewn
+* Thomas Bonnefille
 
 
 ## 1.20.2
