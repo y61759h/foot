@@ -2088,9 +2088,9 @@ wayl_win_destroy(struct wl_window *win)
 
         /* Main window */
     win->unmapped = true;
-    wl_surface_attach(win->surface.surf, NULL, 0, 0);
-    wl_surface_commit(win->surface.surf);
-    wayl_roundtrip(win->term->wl);
+    // wl_surface_attach(win->surface.surf, NULL, 0, 0);
+    // wl_surface_commit(win->surface.surf);
+    // wayl_roundtrip(win->term->wl);
 
     tll_free(win->on_outputs);
 
