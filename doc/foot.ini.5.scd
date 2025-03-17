@@ -1960,6 +1960,9 @@ any of these options.
 	background, you may want to use the default, *8-bit*, even if you
 	have gamma-correct blending enabled.
 	
+	You shouuld also note that 10-bit surface is slower. This will
+	increase input latency and decrease rendering throughput.
+	
 	Default: _8-bit_
 
 # SEE ALSO
