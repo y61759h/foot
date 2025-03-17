@@ -467,7 +467,6 @@ test_section_main(void)
     test_boolean(&ctx, &parse_section_main, "login-shell", &conf.login_shell);
     test_boolean(&ctx, &parse_section_main, "box-drawings-uses-font-glyphs", &conf.box_drawings_uses_font_glyphs);
     test_boolean(&ctx, &parse_section_main, "locked-title", &conf.locked_title);
-    test_boolean(&ctx, &parse_section_main, "notify-focus-inhibit", &conf.desktop_notifications.inhibit_when_focused);  /* Deprecated */
     test_boolean(&ctx, &parse_section_main, "dpi-aware", &conf.dpi_aware);
 
     test_pt_or_px(&ctx, &parse_section_main, "font-size-adjustment", &conf.font_size_adjustment.pt_or_px);  /* TODO: test ‘N%’ values too */
@@ -480,8 +479,6 @@ test_section_main(void)
 
     test_uint16(&ctx, &parse_section_main, "resize-delay-ms", &conf.resize_delay_ms);
     test_uint16(&ctx, &parse_section_main, "workers", &conf.render_worker_count);
-
-    test_spawn_template(&ctx, &parse_section_main, "notify", &conf.desktop_notifications.command);  /* Deprecated */
 
     test_enum(&ctx, &parse_section_main, "selection-target",
               4,

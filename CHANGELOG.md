@@ -112,6 +112,8 @@
 
 * `url.uri-characters` and `url.protocols`. Both options have been
   replaced by `url.regex`.
+* `notify` option (has been deprecated since 1.18.0).
+* `notify-focus-inhibit` option (has been deprecated since 1.18.0).
 
 
 ### Fixed

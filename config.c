@@ -1058,30 +1058,6 @@ parse_section_main(struct context *ctx)
     else if (streq(key, "word-delimiters"))
         return value_to_wchars(ctx, &conf->word_delimiters);
 
-    else if (streq(key, "notify")) {
-        user_notification_add(
-            &conf->notifications, USER_NOTIFICATION_DEPRECATED,
-            xstrdup("notify: use desktop-notifications.command instead"));
-        log_msg(
-            LOG_CLASS_WARNING, LOG_MODULE, __FILE__, __LINE__,
-            "deprecated: notify: use desktop-notifications.command instead");
-        return value_to_spawn_template(
-            ctx, &conf->desktop_notifications.command);
-    }
-
-    else if (streq(key, "notify-focus-inhibit")) {
-        user_notification_add(
-            &conf->notifications, USER_NOTIFICATION_DEPRECATED,
-            xstrdup("notify-focus-inhibit: "
-                    "use desktop-notifications.inhibit-when-focused instead"));
-        log_msg(
-            LOG_CLASS_WARNING, LOG_MODULE, __FILE__, __LINE__,
-            "deprecrated: notify-focus-inhibit: "
-            "use desktop-notifications.inhibit-when-focused instead");
-        return value_to_bool(
-            ctx, &conf->desktop_notifications.inhibit_when_focused);
-    }
-
     else if (streq(key, "selection-target")) {
         _Static_assert(sizeof(conf->selection_target) == sizeof(int),
                        "enum is not 32-bit");
