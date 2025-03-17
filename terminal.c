@@ -1157,6 +1157,12 @@ load_fonts_from_conf(struct terminal *term)
     return reload_fonts(term, true);
 }
 
+static inline uint8_t gamma_correct(uint8_t value, double gamma) {
+    double normalized = value / 255.0;
+    double corrected = pow(normalized, gamma) * 255.0;
+    return (uint8_t)corrected;
+}
+
 static void
 load_background_image(struct terminal *term) {
     if (term->conf->background_image == NULL)
@@ -1225,14 +1231,38 @@ load_background_image(struct terminal *term) {
 
     fclose(fp);
 
-    pixman_image_t *pixman_image = pixman_image_create_bits(PIXMAN_a8r8g8b8, width, height, NULL, 0);
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            png_bytep px = &(row_pointers[y][x * 4]);
-            uint32_t *dst = (uint32_t *)(pixman_image_get_data(pixman_image) + y * pixman_image_get_stride(pixman_image) / 4 + x);
-            *dst = (px[3] << 24) | (px[0] << 16) | (px[1] << 8) | px[2];
+    pixman_format_code_t pixman_fmt = PIXMAN_a8r8g8b8;
+    if (term->conf->tweak.surface_bit_depth == SHM_10_BIT) {
+        if (term->wl->shm_have_argb2101010 && term->wl->shm_have_xrgb2101010) {
+            pixman_fmt = PIXMAN_a2r10g10b10;
+        }
+        else if (term->wl->shm_have_abgr2101010 && term->wl->shm_have_xbgr2101010) {
+            pixman_fmt = PIXMAN_a2b10g10r10;
         }
     }
+
+    double gamma = 2.2;
+    uint32_t *pixels = (uint32_t *)malloc(width * height * sizeof(uint32_t));
+    for (int y = 0; y < height; y++) {
+        png_bytep row = row_pointers[y];
+        for (int x = 0; x < width; x++) {
+            png_bytep px = &(row[x * 4]);
+            uint8_t a = px[3];
+            uint8_t r = px[0];
+            uint8_t g = px[1];
+            uint8_t b = px[2];
+
+            if (term->conf->gamma_correct) {
+                r = gamma_correct(r, gamma);
+                g = gamma_correct(g, gamma);
+                b = gamma_correct(b, gamma);
+            }
+
+            pixels[y * width + x] = (a << 24) | (r << 16) | (g << 8) | b;
+        }
+    }
+
+    pixman_image_t *pixman_image = pixman_image_create_bits(pixman_fmt, width, height, pixels, width * 4);
 
     term->render.background_image.pit = pixman_image;
     term->render.background_image.width = width;

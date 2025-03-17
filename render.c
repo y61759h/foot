@@ -3241,7 +3241,7 @@ pixman_image_t* scale_and_crop_image(pixman_image_t *bg_image, int dest_width, i
 
     // 创建缩放后的图像
     pixman_image_t *scaled_image = pixman_image_create_bits(
-        PIXMAN_a8r8g8b8, scaled_width, scaled_height, NULL, -1);
+        format, scaled_width, scaled_height, NULL, -1);
 
     // 缩放图像
     double s_x = floor(((double)src_width / dest_width) * 100 ) / 100;
