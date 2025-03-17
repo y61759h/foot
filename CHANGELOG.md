@@ -1,6 +1,6 @@
 # Changelog
 
-* [Unreleased](#unreleased)
+* [1.21.0](#1-21-0)
 * [1.20.2](#1-20-2)
 * [1.20.1](#1-20-1)
 * [1.20.0](#1-20-0)
@@ -58,7 +58,7 @@
 * [1.2.0](#1-2-0)
 
 
-## Unreleased
+## 1.21.0
 
 ### Added
 
@@ -68,9 +68,20 @@
 * Support for custom regex matching ([#1386][1386],
   [#1872][1872])
 * Support for kitty's text-sizing protocol (`w`, width, only), OSC-66.
+* `cursor.style` can now be set to `hollow` ([#1965][1965]).
+* `search-bindings.delete-to-start` and
+  `search-bindings.delete-to-end` key bindings, defaulting to
+  `Control+u` and `Control+k` respectively ([#1972][1972]).
+* Gamma-correct font rendering. Requires compositor support
+  (`wp_color_management_v1`, and specifically, the `ext_linear`
+  transfer function). Enabled by default when compositor support is
+  available. Can be explicitly enabled or disabled with
+  `gamma-correct-blending=no|yes`.
 
 [1386]: https://codeberg.org/dnkl/foot/issues/1386
 [1872]: https://codeberg.org/dnkl/foot/issues/1872
+[1965]: https://codeberg.org/dnkl/foot/issues/1965
+[1972]: https://codeberg.org/dnkl/foot/issues/1972
 
 
 ### Changed
@@ -81,15 +92,27 @@
 * Auto-detection of URLs (i.e. not OSC-8 based URLs) are now regex
   based.
 * Rename Tokyo Night Day theme to Tokyo Night Light and update colors.
+* fcft >= 3.3.1 is now required.
+  - `tweak.scaling-filter` now supports more scaling-filters
+  - scaled bitmap fonts (when enabled in FontConfig) no longer have a
+    scaling-filter applied
+* Linefeed:ing control characters (e.g. `\n`) no longer **clears** a
+  row's internal linebreak flag. This fixes an issue where
+  e.g. multi-line prompt input in fish is treated as separate lines,
+  rather than one logical, when selecting and copying it
+  ([#1487][1487]).
+* wayland-protocols >= 1.41 is now required.
 
 [1925]: https://codeberg.org/dnkl/foot/issues/1925
+[1487]: https://codeberg.org/dnkl/foot/issues/1487
 
 
-### Deprecated
 ### Removed
 
 * `url.uri-characters` and `url.protocols`. Both options have been
   replaced by `url.regex`.
+* `notify` option (has been deprecated since 1.18.0).
+* `notify-focus-inhibit` option (has been deprecated since 1.18.0).
 
 
 ### Fixed
@@ -112,15 +135,40 @@
   enabled ([#1947][1947]).
 * Reflow of the cursor (active + saved) when at the end of the line
   with a pending wrap (LCF set) ([#1954][1954]).
+* Zero-width characters that also are grapheme breaks (e.g. U+200B,
+  ZERO WIDTH SPACE) being ignored (discarded and never stored in the
+  grid) ([#1960][1960]).
+* `--server=<FD>` not working on FreeBSD ([#1956][1956]).
+* Crash when resetting the terminal and an application had previously
+  set a custom app ID ([#1963][1963])
+* Grapheme clustering state not reset on cursor movements.
+* Kitty keyboard protocol: no release events emitted for composed
+  keys.
+* IME: the initial cursor position was reported as 0,0,0,0
+  ([#1994][1994]).
 
 [1918]: https://codeberg.org/dnkl/foot/issues/1918
 [1929]: https://codeberg.org/dnkl/foot/issues/1929
 [1947]: https://codeberg.org/dnkl/foot/issues/1947
 [1954]: https://codeberg.org/dnkl/foot/issues/1954
+[1960]: https://codeberg.org/dnkl/foot/issues/1960
+[1956]: https://codeberg.org/dnkl/foot/issues/1956
+[1963]: https://codeberg.org/dnkl/foot/issues/1963
+[1994]: https://codeberg.org/dnkl/foot/issues/1994
 
 
-### Security
 ### Contributors
+
+* Adrian fxj9a
+* Alexander Orzechowski
+* Attila Fidan
+* camel-cdr
+* Craig Barnes
+* Guillaume Outters
+* Johannes Altmanninger
+* Ludovico Gerardi
+* sewn
+* Thomas Bonnefille
 
 
 ## 1.20.2

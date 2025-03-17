@@ -10,6 +10,7 @@
 #include "grid.h"
 #include "hsl.h"
 #include "render.h"
+#include "srgb.h"
 #include "util.h"
 #include "xmalloc.h"
 #include "xsnprintf.h"
@@ -18,6 +19,40 @@ static size_t count;
 
 static void sixel_put_generic(struct terminal *term, uint8_t c);
 static void sixel_put_ar_11(struct terminal *term, uint8_t c);
+
+static uint32_t
+color_decode_srgb(const struct terminal *term, uint16_t r, uint16_t g, uint16_t b)
+{
+    if (term->sixel.linear_blending) {
+        if (term->sixel.use_10bit) {
+            r = srgb_decode_8_to_16(r) >> 6;
+            g = srgb_decode_8_to_16(g) >> 6;
+            b = srgb_decode_8_to_16(b) >> 6;
+        } else {
+            r = srgb_decode_8_to_8(r);
+            g = srgb_decode_8_to_8(g);
+            b = srgb_decode_8_to_8(b);
+        }
+    } else {
+        if (term->sixel.use_10bit) {
+            r <<= 2;
+            g <<= 2;
+            b <<= 2;
+        }
+    }
+
+    uint32_t color;
+
+    if (term->sixel.use_10bit) {
+        if (PIXMAN_FORMAT_TYPE(term->sixel.pixman_fmt) == PIXMAN_TYPE_ARGB)
+            color = 0x3u << 30 | r << 20 | g << 10 | b;
+        else
+            color = 0x3u << 30 | b << 20 | g << 10 | r;
+    } else
+        color = 0xffu << 24 | r << 16 | g << 8 | b;
+
+    return color;
+}
 
 void
 sixel_fini(struct terminal *term)
@@ -75,6 +110,23 @@ sixel_init(struct terminal *term, int p1, int p2, int p3)
     term->sixel.image.height = 0;
     term->sixel.image.alloc_height = 0;
     term->sixel.image.bottom_pixel = 0;
+    term->sixel.linear_blending = render_do_linear_blending(term);
+    term->sixel.pixman_fmt = PIXMAN_a8r8g8b8;
+
+    if (term->conf->tweak.surface_bit_depth == SHM_10_BIT) {
+        if (term->wl->shm_have_argb2101010 && term->wl->shm_have_xrgb2101010) {
+            term->sixel.use_10bit = true;
+            term->sixel.pixman_fmt = PIXMAN_a2r10g10b10;
+        }
+
+        else if (term->wl->shm_have_abgr2101010 && term->wl->shm_have_xbgr2101010) {
+            term->sixel.use_10bit = true;
+            term->sixel.pixman_fmt = PIXMAN_a2b10g10r10;
+        }
+    }
+
+    const size_t active_palette_entries = min(
+            ALEN(term->conf->colors.sixel), term->sixel.palette_size);
 
     if (term->sixel.use_private_palette) {
         xassert(term->sixel.private_palette == NULL);
@@ -83,11 +135,18 @@ sixel_init(struct terminal *term, int p1, int p2, int p3)
 
         memcpy(
             term->sixel.private_palette, term->conf->colors.sixel,
-            min(sizeof(term->conf->colors.sixel),
-                term->sixel.palette_size * sizeof(term->sixel.private_palette[0])));
+            active_palette_entries * sizeof(term->sixel.private_palette[0]));
+
+        if (term->sixel.linear_blending || term->sixel.use_10bit) {
+            for (size_t i = 0; i < active_palette_entries; i++) {
+                uint8_t r = (term->sixel.private_palette[i] >> 16) & 0xff;
+                uint8_t g = (term->sixel.private_palette[i] >> 8) & 0xff;
+                uint8_t b = (term->sixel.private_palette[i] >> 0) & 0xff;
+                term->sixel.private_palette[i] = color_decode_srgb(term, r, g, b);
+            }
+        }
 
         term->sixel.palette = term->sixel.private_palette;
-
     } else {
         if (term->sixel.shared_palette == NULL) {
             term->sixel.shared_palette = xcalloc(
@@ -95,8 +154,16 @@ sixel_init(struct terminal *term, int p1, int p2, int p3)
 
             memcpy(
                 term->sixel.shared_palette, term->conf->colors.sixel,
-                min(sizeof(term->conf->colors.sixel),
-                    term->sixel.palette_size * sizeof(term->sixel.shared_palette[0])));
+                active_palette_entries * sizeof(term->sixel.shared_palette[0]));
+
+            if (term->sixel.linear_blending || term->sixel.use_10bit) {
+                for (size_t i = 0; i < active_palette_entries; i++) {
+                    uint8_t r = (term->sixel.private_palette[i] >> 16) & 0xff;
+                    uint8_t g = (term->sixel.private_palette[i] >> 8) & 0xff;
+                    uint8_t b = (term->sixel.private_palette[i] >> 0) & 0xff;
+                    term->sixel.private_palette[i] = color_decode_srgb(term, r, g, b);
+                }
+            }
         } else {
             /* Shared palette - do *not* reset palette for new sixels */
         }
@@ -488,7 +555,7 @@ blend_new_image_over_old(const struct terminal *term,
     int stride = new_width * sizeof(uint32_t);
     uint32_t *new_data = xmalloc(stride * new_height);
     pixman_image_t *pix2 = pixman_image_create_bits_no_clear(
-        PIXMAN_a8r8g8b8, new_width, new_height, new_data, stride);
+        term->sixel.pixman_fmt, new_width, new_height, new_data, stride);
 
 #if defined(_DEBUG)
     /* Fill new image with an easy-to-recognize color (green) */
@@ -651,8 +718,7 @@ sixel_overwrite(struct terminal *term, struct sixel *six,
         }
 
         pixman_image_t *new_pix = pixman_image_create_bits_no_clear(
-            PIXMAN_a8r8g8b8,
-            new_width, new_height, new_data, new_width * sizeof(uint32_t));
+            term->sixel.pixman_fmt, new_width, new_height, new_data, new_width * sizeof(uint32_t));
 
         struct sixel new_six = {
             .pix = NULL,
@@ -948,7 +1014,7 @@ sixel_sync_cache(const struct terminal *term, struct sixel *six)
 
         uint8_t *scaled_data = xmalloc(scaled_height * scaled_stride);
         pixman_image_t *scaled_pix = pixman_image_create_bits_no_clear(
-            PIXMAN_a8r8g8b8, scaled_width, scaled_height,
+            term->sixel.pixman_fmt, scaled_width, scaled_height,
             (uint32_t *)scaled_data, scaled_stride);
 
         pixman_image_composite32(
@@ -1232,7 +1298,7 @@ sixel_unhook(struct terminal *term)
                 image.pos.row, image.pos.row + image.rows);
 
         image.original.pix = pixman_image_create_bits_no_clear(
-            PIXMAN_a8r8g8b8, image.original.width, image.original.height,
+            term->sixel.pixman_fmt, image.original.width, image.original.height,
             img_data, stride);
 
         pixel_row_idx += height;
@@ -2006,15 +2072,14 @@ decgci(struct terminal *term, uint8_t c)
             }
 
             case 2: {  /* RGB */
-                uint8_t r = 255 * min(c1, 100) / 100;
-                uint8_t g = 255 * min(c2, 100) / 100;
-                uint8_t b = 255 * min(c3, 100) / 100;
+                uint16_t r = 255 * min(c1, 100) / 100;
+                uint16_t g = 255 * min(c2, 100) / 100;
+                uint16_t b = 255 * min(c3, 100) / 100;
 
-                LOG_DBG("setting palette #%d = RGB %hhu/%hhu/%hhu",
+                LOG_DBG("setting palette #%d = RGB %hu/%hu/%hu",
                         term->sixel.color_idx, r, g, b);
 
-                term->sixel.palette[term->sixel.color_idx] =
-                    0xffu << 24 | r << 16 | g << 8 | b;
+                term->sixel.palette[term->sixel.color_idx] = color_decode_srgb(term, r, g, b);
                 break;
             }
             }

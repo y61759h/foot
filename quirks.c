@@ -86,6 +86,7 @@ is_sway(void)
 void
 quirk_sway_subsurface_unmap(struct terminal *term)
 {
+    return;
     if (!is_sway())
         return;
 

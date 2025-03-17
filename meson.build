@@ -1,5 +1,5 @@
 project('foot', 'c',
-        version: '1.20.2',
+        version: '1.21.0',
         license: 'MIT',
         meson_version: '>=0.59.0',
         default_options: [
@@ -133,7 +133,7 @@ threads = [dependency('threads'), cc.find_library('stdthreads', required: false)
 libepoll = dependency('epoll-shim', required: false)
 pixman = dependency('pixman-1')
 libpng = dependency('libpng')
-wayland_protocols = dependency('wayland-protocols', version: '>=1.32',
+wayland_protocols = dependency('wayland-protocols', version: '>=1.41',
                                fallback: 'wayland-protocols',
                                default_options: ['tests=false'])
 wayland_client = dependency('wayland-client')
@@ -147,7 +147,7 @@ if utf8proc.found()
 endif
 
 tllist = dependency('tllist', version: '>=1.1.0', fallback: 'tllist')
-fcft = dependency('fcft', version: ['>=3.0.1', '<4.0.0'], fallback: 'fcft')
+fcft = dependency('fcft', version: ['>=3.3.1', '<4.0.0'], fallback: 'fcft')
 
 wayland_protocols_datadir = wayland_protocols.get_variable('pkgdatadir')
 
@@ -170,24 +170,10 @@ wl_proto_xml = [
   wayland_protocols_datadir / 'unstable/tablet/tablet-unstable-v2.xml',  # required by cursor-shape-v1
   wayland_protocols_datadir / 'staging/cursor-shape/cursor-shape-v1.xml',
   wayland_protocols_datadir / 'staging/single-pixel-buffer/single-pixel-buffer-v1.xml',
+  wayland_protocols_datadir / 'staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml',
+  wayland_protocols_datadir / 'staging/xdg-system-bell/xdg-system-bell-v1.xml',
+  wayland_protocols_datadir / 'staging/color-management/color-management-v1.xml',
   ]
-
-if wayland_protocols.version().version_compare('>=1.37')
-  add_project_arguments('-DHAVE_XDG_TOPLEVEL_ICON', language: 'c')
-  wl_proto_xml += [wayland_protocols_datadir / 'staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml']
-  xdg_toplevel_icon = true
-else
-  xdg_toplevel_icon = false
-endif
-
-if wayland_protocols.version().version_compare('>=1.38')
-  add_project_arguments('-DHAVE_XDG_SYSTEM_BELL', language: 'c')
-  wl_proto_xml += [wayland_protocols_datadir / 'staging/xdg-system-bell/xdg-system-bell-v1.xml']
-  xdg_system_bell = true
-else
-  xdg_system_bell = false
-endif
-
 
 foreach prot : wl_proto_xml
   wl_proto_headers += custom_target(
@@ -229,6 +215,13 @@ emoji_variation_sequences = custom_target(
   command: [python, generate_emoji_variation_sequences, '@INPUT@', '@OUTPUT@']
 )
 
+generate_srgb_funcs = files('scripts/srgb.py')
+srgb_funcs = custom_target(
+  'generate_srgb_funcs',
+  output: ['srgb.c', 'srgb.h'],
+  command: [python, generate_srgb_funcs, '@OUTPUT0@', '@OUTPUT1@']
+)
+
 common = static_library(
   'common',
   'log.c', 'log.h',
@@ -261,7 +254,7 @@ vtlib = static_library(
   'osc.c', 'osc.h',
   'sixel.c', 'sixel.h',
   'vt.c', 'vt.h',
-  builtin_terminfo, emoji_variation_sequences,
+  builtin_terminfo, emoji_variation_sequences, srgb_funcs,
   wl_proto_src + wl_proto_headers,
   version,
   dependencies: [libepoll, pixman, fcft, tllist, wayland_client, xkb, utf8proc],
@@ -303,7 +296,7 @@ executable(
   'commands.c', 'commands.h',
   'extract.c', 'extract.h',
   'fdm.c', 'fdm.h',
-  'foot-features.h',
+  'foot-features.c', 'foot-features.h',
   'ime.c', 'ime.h',
   'input.c', 'input.h',
   'key-binding.c', 'key-binding.h',
@@ -331,7 +324,7 @@ executable(
 executable(
   'footclient',
   'client.c', 'client-protocol.h',
-  'foot-features.h',
+  'foot-features.c', 'foot-features.h',
   'macros.h',
   'util.h',
   version,
@@ -423,8 +416,6 @@ summary(
     'Themes': get_option('themes'),
     'IME': get_option('ime'),
     'Grapheme clustering': utf8proc.found(),
-    'Wayland: xdg-toplevel-icon-v1': xdg_toplevel_icon,
-    'Wayland: xdg-system-bell-v1': xdg_system_bell,
     'utmp backend': utmp_backend,
     'utmp helper default path': utmp_default_helper_path,
     'Build terminfo': tic.found(),

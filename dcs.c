@@ -422,6 +422,7 @@ decrqss_unhook(struct terminal *term)
         int mode;
 
         switch (term->cursor_style) {
+        case CURSOR_HOLLOW:    /* FALLTHROUGH */
         case CURSOR_BLOCK:     mode = 2; break;
         case CURSOR_UNDERLINE: mode = 4; break;
         case CURSOR_BEAM:      mode = 6; break;

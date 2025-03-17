@@ -22,10 +22,7 @@
 #include <presentation-time.h>
 #include <wayland-cursor.h>
 #include <xdg-shell.h>
-
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
 #include <xdg-toplevel-icon-v1.h>
-#endif
 
 #include <fcft/fcft.h>
 
@@ -44,6 +41,7 @@
 #include "selection.h"
 #include "shm.h"
 #include "sixel.h"
+#include "srgb.h"
 #include "url-mode.h"
 #include "util.h"
 #include "xmalloc.h"
@@ -232,22 +230,45 @@ attrs_to_font(const struct terminal *term, const struct attributes *attrs)
     return term->fonts[idx];
 }
 
-static inline pixman_color_t
-color_hex_to_pixman_with_alpha(uint32_t color, uint16_t alpha)
+static pixman_color_t
+color_hex_to_pixman_srgb(uint32_t color, uint16_t alpha)
 {
     return (pixman_color_t){
-        .red =   ((color >> 16 & 0xff) | (color >> 8 & 0xff00)) * alpha / 0xffff,
-        .green = ((color >>  8 & 0xff) | (color >> 0 & 0xff00)) * alpha / 0xffff,
-        .blue =  ((color >>  0 & 0xff) | (color << 8 & 0xff00)) * alpha / 0xffff,
-        .alpha = alpha,
+        .alpha = alpha,  /* Consider alpha linear already? */
+        .red = srgb_decode_8_to_16((color >> 16) & 0xff),
+        .green = srgb_decode_8_to_16((color >> 8) & 0xff),
+        .blue = srgb_decode_8_to_16((color >> 0) & 0xff),
     };
 }
 
 static inline pixman_color_t
-color_hex_to_pixman(uint32_t color)
+color_hex_to_pixman_with_alpha(uint32_t color, uint16_t alpha, bool srgb)
+{
+    pixman_color_t ret;
+
+    if (srgb)
+        ret = color_hex_to_pixman_srgb(color, alpha);
+    else {
+        ret = (pixman_color_t){
+            .red =   ((color >> 16 & 0xff) | (color >> 8 & 0xff00)),
+            .green = ((color >>  8 & 0xff) | (color >> 0 & 0xff00)),
+            .blue =  ((color >>  0 & 0xff) | (color << 8 & 0xff00)),
+            .alpha = alpha,
+            };
+    }
+
+    ret.red = (uint32_t)ret.red * alpha / 0xffff;
+    ret.green = (uint32_t)ret.green * alpha / 0xffff;
+    ret.blue = (uint32_t)ret.blue * alpha / 0xffff;
+
+    return ret;
+}
+
+static inline pixman_color_t
+color_hex_to_pixman(uint32_t color, bool srgb)
 {
     /* Count on the compiler optimizing this */
-    return color_hex_to_pixman_with_alpha(color, 0xffff);
+    return color_hex_to_pixman_with_alpha(color, 0xffff, srgb);
 }
 
 static inline uint32_t
@@ -568,23 +589,24 @@ draw_strikeout(const struct terminal *term, pixman_image_t *pix,
 
 static void
 cursor_colors_for_cell(const struct terminal *term, const struct cell *cell,
-              const pixman_color_t *fg, const pixman_color_t *bg,
-              pixman_color_t *cursor_color, pixman_color_t *text_color)
+                       const pixman_color_t *fg, const pixman_color_t *bg,
+                       pixman_color_t *cursor_color, pixman_color_t *text_color,
+                       bool gamma_correct)
 {
     if (term->colors.cursor_bg >> 31)
-        *cursor_color = color_hex_to_pixman(term->colors.cursor_bg);
+        *cursor_color = color_hex_to_pixman(term->colors.cursor_bg, gamma_correct);
     else
         *cursor_color = *fg;
 
     if (term->colors.cursor_fg >> 31)
-        *text_color = color_hex_to_pixman(term->colors.cursor_fg);
+        *text_color = color_hex_to_pixman(term->colors.cursor_fg, gamma_correct);
     else {
         *text_color = *bg;
 
         if (unlikely(text_color->alpha != 0xffff)) {
             /* The *only* color that can have transparency is the
              * default background color */
-            *text_color = color_hex_to_pixman(term->colors.bg);
+            *text_color = color_hex_to_pixman(term->colors.bg, gamma_correct);
         }
     }
 
@@ -592,8 +614,8 @@ cursor_colors_for_cell(const struct terminal *term, const struct cell *cell,
         text_color->green == cursor_color->green &&
         text_color->blue == cursor_color->blue)
     {
-        *text_color = color_hex_to_pixman(term->colors.bg);
-        *cursor_color = color_hex_to_pixman(term->colors.fg);
+        *text_color = color_hex_to_pixman(term->colors.bg, gamma_correct);
+        *cursor_color = color_hex_to_pixman(term->colors.fg, gamma_correct);
     }
 }
 
@@ -604,7 +626,8 @@ draw_cursor(const struct terminal *term, const struct cell *cell,
 {
     pixman_color_t cursor_color;
     pixman_color_t text_color;
-    cursor_colors_for_cell(term, cell, fg, bg, &cursor_color, &text_color);
+    cursor_colors_for_cell(term, cell, fg, bg, &cursor_color, &text_color,
+                           render_do_linear_blending(term));
 
     if (unlikely(!term->kbd_focus)) {
         switch (term->conf->cursor.unfocused_style) {
@@ -647,12 +670,18 @@ draw_cursor(const struct terminal *term, const struct cell *cell,
             draw_underline_cursor(term, pix, font, &cursor_color, x, y, cols);
         }
         break;
+
+    case CURSOR_HOLLOW:
+        if (likely(term->cursor_blink.state == CURSOR_BLINK_ON))
+            draw_hollow_block(term, pix, &cursor_color, x, y, cols);
+        break;
     }
 }
 
 static int
-render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damage,
-            struct row *row, int row_no, int col, bool has_cursor)
+render_cell(struct terminal *term, pixman_image_t *pix,
+            pixman_region32_t *damage, struct row *row, int row_no, int col,
+            bool has_cursor)
 {
     struct cell *cell = &row->cells[col];
     if (cell->attrs.clean)
@@ -772,8 +801,9 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
     if (cell->attrs.blink && term->blink.state == BLINK_OFF)
         _fg = color_decrease_luminance(_fg);
 
-    pixman_color_t fg = color_hex_to_pixman(_fg);
-    pixman_color_t bg = color_hex_to_pixman_with_alpha(_bg, alpha);
+    const bool gamma_correct = render_do_linear_blending(term);
+    pixman_color_t fg = color_hex_to_pixman(_fg, gamma_correct);
+    pixman_color_t bg = color_hex_to_pixman_with_alpha(_bg, alpha, gamma_correct);
 
     struct fcft_font *font = attrs_to_font(term, &cell->attrs);
     const struct composed *composed = NULL;
@@ -983,7 +1013,7 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
         if (i > 0 && glyph->x >= 0 && cell_cols == 1)
             g_x -= term->cell_width;
 
-        if (unlikely(pixman_image_get_format(glyph->pix) == PIXMAN_a8r8g8b8)) {
+        if (unlikely(glyph->is_color_glyph)) {
             /* Glyph surface is a pre-rendered image (typically a color emoji...) */
             if (!(cell->attrs.blink && term->blink.state == BLINK_OFF)) {
                 pixman_image_composite32(
@@ -1067,12 +1097,12 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
                     switch (range->underline.color_src) {
                     case COLOR_BASE256:
                         underline_color = color_hex_to_pixman(
-                            term->colors.table[range->underline.color]);
+                            term->colors.table[range->underline.color], gamma_correct);
                         break;
 
                     case COLOR_RGB:
                         underline_color =
-                            color_hex_to_pixman(range->underline.color);
+                            color_hex_to_pixman(range->underline.color, gamma_correct);
                         break;
 
                     case COLOR_DEFAULT:
@@ -1101,8 +1131,8 @@ render_cell(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damag
         pixman_color_t url_color = color_hex_to_pixman(
             term->conf->colors.use_custom.url
             ? term->conf->colors.url
-            : term->colors.table[3]
-            );
+            : term->colors.table[3],
+            gamma_correct);
         draw_underline(term, pix, font, &url_color, x, y, cell_cols);
     }
 
@@ -1115,8 +1145,9 @@ draw_cursor:
 }
 
 static void
-render_row(struct terminal *term, pixman_image_t *pix, pixman_region32_t *damage,
-           struct row *row, int row_no, int cursor_col)
+render_row(struct terminal *term, pixman_image_t *pix,
+           pixman_region32_t *damage, struct row *row,
+           int row_no, int cursor_col)
 {
     for (int col = term->cols - 1; col >= 0; col--)
         render_cell(term, pix, damage, row, row_no, col, cursor_col == col);
@@ -1126,7 +1157,7 @@ static void
 render_urgency(struct terminal *term, struct buffer *buf)
 {
     uint32_t red = term->colors.table[1];
-    pixman_color_t bg = color_hex_to_pixman(red);
+    pixman_color_t bg = color_hex_to_pixman(red, render_do_linear_blending(term));
 
     int width = min(min(term->margins.left, term->margins.right),
                     min(term->margins.top, term->margins.bottom));
@@ -1157,6 +1188,7 @@ render_margin(struct terminal *term, struct buffer *buf,
     const int bmargin = term->height - term->margins.bottom;
     const int line_count = end_line - start_line;
 
+    const bool gamma_correct = render_do_linear_blending(term);
     const uint32_t _bg = !term->reverse ? term->colors.bg : term->colors.fg;
     uint16_t alpha = term->colors.alpha;
 
@@ -1166,7 +1198,7 @@ render_margin(struct terminal *term, struct buffer *buf,
         alpha = term->colors.alpha;
     }
 
-    pixman_color_t bg = color_hex_to_pixman_with_alpha(_bg, alpha);
+    pixman_color_t bg = color_hex_to_pixman_with_alpha(_bg, alpha, gamma_correct);
 
     pixman_image_fill_rectangles(
         PIXMAN_OP_SRC, buf->pix[0], &bg, 4,
@@ -1593,8 +1625,7 @@ render_sixel(struct terminal *term, pixman_image_t *pix,
 
 static void
 render_sixel_images(struct terminal *term, pixman_image_t *pix,
-                    pixman_region32_t *damage,
-                    const struct coord *cursor)
+                    pixman_region32_t *damage, const struct coord *cursor)
 {
     if (likely(tll_length(term->grid->sixel_images)) == 0)
         return;
@@ -1645,6 +1676,8 @@ render_ime_preedit_for_seat(struct terminal *term, struct seat *seat,
 
     if (unlikely(term->is_searching))
         return;
+
+    const bool gamma_correct = render_do_linear_blending(term);
 
     /* Adjust cursor position to viewport */
     struct coord cursor;
@@ -1750,12 +1783,12 @@ render_ime_preedit_for_seat(struct terminal *term, struct seat *seat,
     if (!seat->ime.preedit.cursor.hidden) {
         const struct cell *start_cell = &seat->ime.preedit.cells[0];
 
-        pixman_color_t fg = color_hex_to_pixman(term->colors.fg);
-        pixman_color_t bg = color_hex_to_pixman(term->colors.bg);
+        pixman_color_t fg = color_hex_to_pixman(term->colors.fg, gamma_correct);
+        pixman_color_t bg = color_hex_to_pixman(term->colors.bg, gamma_correct);
 
         pixman_color_t cursor_color, text_color;
         cursor_colors_for_cell(
-            term, start_cell, &fg, &bg, &cursor_color, &text_color);
+            term, start_cell, &fg, &bg, &cursor_color, &text_color, gamma_correct);
 
         int x = term->margins.left + (col_idx + start) * term->cell_width;
         int y = term->margins.top + row_idx * term->cell_height;
@@ -1786,12 +1819,14 @@ render_ime_preedit_for_seat(struct terminal *term, struct seat *seat,
         row->cells[col_idx + i] = real_cells[i];
     free(real_cells);
 
+    const int damage_x = term->margins.left + col_idx * term->cell_width;
+    const int damage_y = term->margins.top + row_idx * term->cell_height;
+    const int damage_w = cells_used * term->cell_width;
+    const int damage_h = term->cell_height;
+
     wl_surface_damage_buffer(
         term->window->surface.surf,
-        term->margins.left,
-        term->margins.top + row_idx * term->cell_height,
-        term->width - term->margins.left - term->margins.right,
-        1 * term->cell_height);
+        damage_x, damage_y, damage_w, damage_h);
 }
 #endif
 
@@ -1913,7 +1948,7 @@ render_overlay(struct terminal *term)
     case OVERLAY_FLASH:
         color = color_hex_to_pixman_with_alpha(
                 term->conf->colors.flash,
-                term->conf->colors.flash_alpha);
+                term->conf->colors.flash_alpha, render_do_linear_blending(term));
         break;
 
     case OVERLAY_NONE:
@@ -2115,6 +2150,7 @@ render_worker_thread(void *_ctx)
         sem_wait(start);
 
         struct buffer *buf = term->render.workers.buf;
+
         bool frame_done = false;
 
         /* Translate offset-relative cursor row to view-relative */
@@ -2135,8 +2171,6 @@ render_worker_thread(void *_ctx)
 
             switch (row_no) {
             default: {
-                xassert(buf != NULL);
-
                 struct row *row = grid_row_in_view(term->grid, row_no);
                 int cursor_col = cursor.row == row_no ? cursor.col : -1;
 
@@ -2256,13 +2290,14 @@ render_osd(struct terminal *term, const struct wayl_sub_surface *sub_surf,
     pixman_image_set_clip_region32(buf->pix[0], &clip);
     pixman_region32_fini(&clip);
 
+    const bool gamma_correct = render_do_linear_blending(term);
     uint16_t alpha = _bg >> 24 | (_bg >> 24 << 8);
-    pixman_color_t bg = color_hex_to_pixman_with_alpha(_bg, alpha);
+    pixman_color_t bg = color_hex_to_pixman_with_alpha(_bg, alpha, gamma_correct);
     pixman_image_fill_rectangles(
         PIXMAN_OP_SRC, buf->pix[0], &bg, 1,
         &(pixman_rectangle16_t){0, 0, buf->width, buf->height});
 
-    pixman_color_t fg = color_hex_to_pixman(_fg);
+    pixman_color_t fg = color_hex_to_pixman(_fg, gamma_correct);
     const int x_ofs = term->font_x_ofs;
 
     const size_t len = c32len(text);
@@ -2309,7 +2344,7 @@ render_osd(struct terminal *term, const struct wayl_sub_surface *sub_surf,
     for (size_t i = 0; i < glyph_count; i++) {
         const struct fcft_glyph *glyph = glyphs[i];
 
-        if (pixman_image_get_format(glyph->pix) == PIXMAN_a8r8g8b8) {
+        if (unlikely(glyph->is_color_glyph)) {
             pixman_image_composite32(
                 PIXMAN_OP_OVER, glyph->pix, NULL, buf->pix[0], 0, 0, 0, 0,
                 x + x_ofs + glyph->x, y - glyph->y,
@@ -2396,8 +2431,11 @@ render_csd_border(struct terminal *term, enum csd_surface surf_idx,
     if (info->width == 0 || info->height == 0)
         return;
 
+    const bool gamma_correct = render_do_linear_blending(term);
+
     {
-        pixman_color_t color = color_hex_to_pixman_with_alpha(0, 0);
+        /* Fully transparent - no need to do a color space transform */
+        pixman_color_t color = color_hex_to_pixman_with_alpha(0, 0, gamma_correct);
         render_csd_part(term, surf->surf, buf, info->width, info->height, &color);
     }
 
@@ -2458,7 +2496,8 @@ render_csd_border(struct terminal *term, enum csd_surface surf_idx,
             _color = color_dim(term, _color);
 
         uint16_t alpha = _color >> 24 | (_color >> 24 << 8);
-        pixman_color_t color = color_hex_to_pixman_with_alpha(_color, alpha);
+        pixman_color_t color =
+            color_hex_to_pixman_with_alpha(_color, alpha, gamma_correct);
 
         pixman_image_fill_rectangles(
             PIXMAN_OP_SRC, buf->pix[0], &color, 1,
@@ -2469,8 +2508,9 @@ render_csd_border(struct terminal *term, enum csd_surface surf_idx,
 }
 
 static pixman_color_t
-get_csd_button_fg_color(const struct config *conf)
+get_csd_button_fg_color(const struct terminal *term)
 {
+    const struct config *conf = term->conf;
     uint32_t _color = conf->colors.bg;
     uint16_t alpha = 0xffff;
 
@@ -2479,13 +2519,14 @@ get_csd_button_fg_color(const struct config *conf)
         alpha = _color >> 24 | (_color >> 24 << 8);
     }
 
-    return color_hex_to_pixman_with_alpha(_color, alpha);
+    return color_hex_to_pixman_with_alpha(
+        _color, alpha, render_do_linear_blending(term));
 }
 
 static void
 render_csd_button_minimize(struct terminal *term, struct buffer *buf)
 {
-    pixman_color_t color = get_csd_button_fg_color(term->conf);
+    pixman_color_t color = get_csd_button_fg_color(term);
     pixman_image_t *src = pixman_image_create_solid_fill(&color);
 
     const int max_height = buf->height / 3;
@@ -2513,7 +2554,7 @@ static void
 render_csd_button_maximize_maximized(
     struct terminal *term, struct buffer *buf)
 {
-    pixman_color_t color = get_csd_button_fg_color(term->conf);
+    pixman_color_t color = get_csd_button_fg_color(term);
     pixman_image_t *src = pixman_image_create_solid_fill(&color);
 
     const int max_height = buf->height / 3;
@@ -2545,7 +2586,7 @@ static void
 render_csd_button_maximize_window(
     struct terminal *term, struct buffer *buf)
 {
-    pixman_color_t color = get_csd_button_fg_color(term->conf);
+    pixman_color_t color = get_csd_button_fg_color(term);
     pixman_image_t *src = pixman_image_create_solid_fill(&color);
 
     const int max_height = buf->height / 3;
@@ -2585,7 +2626,7 @@ render_csd_button_maximize(struct terminal *term, struct buffer *buf)
 static void
 render_csd_button_close(struct terminal *term, struct buffer *buf)
 {
-    pixman_color_t color = get_csd_button_fg_color(term->conf);
+    pixman_color_t color = get_csd_button_fg_color(term);
     pixman_image_t *src = pixman_image_create_solid_fill(&color);
 
     const int max_height = buf->height / 3;
@@ -2756,14 +2797,14 @@ render_csd_button(struct terminal *term, enum csd_surface surf_idx,
     if (!term->visual_focus)
         _color = color_dim(term, _color);
 
-    pixman_color_t color = color_hex_to_pixman_with_alpha(_color, alpha);
+    const bool gamma_correct = render_do_linear_blending(term);
+    pixman_color_t color = color_hex_to_pixman_with_alpha(_color, alpha, gamma_correct);
     render_csd_part(term, surf->surf, buf, info->width, info->height, &color);
 
     switch (surf_idx) {
     case CSD_SURF_MINIMIZE: render_csd_button_minimize(term, buf); break;
     case CSD_SURF_MAXIMIZE: render_csd_button_maximize(term, buf); break;
     case CSD_SURF_CLOSE:    render_csd_button_close(term, buf); break;
-        break;
 
     default:
         BUG("unhandled surface type: %u", (unsigned)surf_idx);
@@ -3200,7 +3241,7 @@ pixman_image_t* scale_and_crop_image(pixman_image_t *bg_image, int dest_width, i
 
     // 创建缩放后的图像
     pixman_image_t *scaled_image = pixman_image_create_bits(
-        PIXMAN_a8r8g8b8, scaled_width, scaled_height, NULL, -1);
+        format, scaled_width, scaled_height, NULL, -1);
 
     // 缩放图像
     double s_x = floor(((double)src_width / dest_width) * 100 ) / 100;
@@ -3727,6 +3768,7 @@ render_search_box(struct terminal *term)
         : term->conf->colors.use_custom.search_box_no_match;
 
     /* Background - yellow on empty/match, red on mismatch (default) */
+    const bool gamma_correct = render_do_linear_blending(term);
     const pixman_color_t color = color_hex_to_pixman(
         is_match
         ? (custom_colors
@@ -3734,13 +3776,14 @@ render_search_box(struct terminal *term)
            : term->colors.table[3])
         : (custom_colors
            ? term->conf->colors.search_box.no_match.bg
-           : term->colors.table[1]));
+           : term->colors.table[1]),
+        gamma_correct);
 
     pixman_image_fill_rectangles(
         PIXMAN_OP_SRC, buf->pix[0], &color,
         1, &(pixman_rectangle16_t){width - visible_width, 0, visible_width, height});
 
-    pixman_color_t transparent = color_hex_to_pixman_with_alpha(0, 0);
+    pixman_color_t transparent = color_hex_to_pixman_with_alpha(0, 0, gamma_correct);
     pixman_image_fill_rectangles(
         PIXMAN_OP_SRC, buf->pix[0], &transparent,
         1, &(pixman_rectangle16_t){0, 0, width - visible_width, height});
@@ -3750,12 +3793,14 @@ render_search_box(struct terminal *term)
     const int x_ofs = term->font_x_ofs;
     int x = x_left;
     int y = margin;
+
     pixman_color_t fg = color_hex_to_pixman(
         custom_colors
         ? (is_match
            ? term->conf->colors.search_box.match.fg
            : term->conf->colors.search_box.no_match.fg)
-        : term->colors.table[0]);
+        : term->colors.table[0],
+        gamma_correct);
 
     /* Move offset we start rendering at, to ensure the cursor is visible */
     for (size_t i = 0, cell_idx = 0; i <= term->search.cursor; cell_idx += widths[i], i++) {
@@ -3911,8 +3956,7 @@ render_search_box(struct terminal *term)
             continue;
         }
 
-        if (unlikely(pixman_image_get_format(glyph->pix) == PIXMAN_a8r8g8b8)) {
-            /* Glyph surface is a pre-rendered image (typically a color emoji...) */
+        if (unlikely(glyph->is_color_glyph)) {
             pixman_image_composite32(
                 PIXMAN_OP_OVER, glyph->pix, NULL, buf->pix[0], 0, 0, 0, 0,
                 x + x_ofs + glyph->x, y + term->font_baseline - glyph->y,
@@ -5159,7 +5203,6 @@ render_refresh_app_id(struct terminal *term)
 void
 render_refresh_icon(struct terminal *term)
 {
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     if (term->wl->toplevel_icon_manager == NULL) {
         LOG_DBG("compositor does not implement xdg-toplevel-icon: "
                 "ignoring request to refresh window icon");
@@ -5193,7 +5236,6 @@ render_refresh_icon(struct terminal *term)
     xdg_toplevel_icon_v1_destroy(icon);
 
     term->render.icon.last_update = now;
-#endif
 }
 
 void
@@ -5294,4 +5336,11 @@ render_xcursor_set(struct seat *seat, struct terminal *term,
     seat->pointer.shape = shape;
     seat->pointer.xcursor_pending = true;
     return true;
+}
+
+bool
+render_do_linear_blending(const struct terminal *term)
+{
+    return term->conf->gamma_correct != GAMMA_CORRECT_DISABLED &&
+           term->wl->color_management.img_description != NULL;
 }

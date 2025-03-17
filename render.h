@@ -47,3 +47,5 @@ struct csd_data {
 };
 
 struct csd_data get_csd_data(const struct terminal *term, enum csd_surface surf_idx);
+
+bool render_do_linear_blending(const struct terminal *term);

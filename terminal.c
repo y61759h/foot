@@ -992,6 +992,7 @@ struct font_load_data {
     const char **names;
     const char *attrs;
 
+    const struct fcft_font_options *options;
     struct fcft_font **font;
 };
 
@@ -999,7 +1000,8 @@ static int
 font_loader_thread(void *_data)
 {
     struct font_load_data *data = _data;
-    *data->font = fcft_from_name(data->count, data->names, data->attrs);
+    *data->font = fcft_from_name2(
+        data->count, data->names, data->attrs, data->options);
     return *data->font != NULL;
 }
 
@@ -1066,14 +1068,33 @@ reload_fonts(struct terminal *term, bool resize_grid)
         [1] = xstrjoin(dpi, !custom_bold ? ":weight=bold" : ""),
         [2] = xstrjoin(dpi, !custom_italic ? ":slant=italic" : ""),
         [3] = xstrjoin(dpi, !custom_bold_italic ? ":weight=bold:slant=italic" : ""),
-    };
+        };
+
+    struct fcft_font_options *options = fcft_font_options_create();
+
+    options->scaling_filter = conf->tweak.fcft_filter;
+    options->color_glyphs.format = PIXMAN_a8r8g8b8;
+    options->color_glyphs.srgb_decode = render_do_linear_blending(term);
+
+    if (conf->tweak.surface_bit_depth == SHM_10_BIT) {
+        if ((term->wl->shm_have_argb2101010 && term->wl->shm_have_xrgb2101010) ||
+            (term->wl->shm_have_abgr2101010 && term->wl->shm_have_xbgr2101010))
+        {
+            /*
+             * Use a high-res buffer type for emojis. We don't want to
+             * use an a2r10g0b10 type of surface, since we need more
+             * than 2 bits for alpha.
+             */
+            options->color_glyphs.format = PIXMAN_rgba_float;
+        }
+    }
 
     struct fcft_font *fonts[4];
     struct font_load_data data[4] = {
-        {count_regular,     names_regular,     attrs[0], &fonts[0]},
-        {count_bold,        names_bold,        attrs[1], &fonts[1]},
-        {count_italic,      names_italic,      attrs[2], &fonts[2]},
-        {count_bold_italic, names_bold_italic, attrs[3], &fonts[3]},
+        {count_regular,     names_regular,     attrs[0], options, &fonts[0]},
+        {count_bold,        names_bold,        attrs[1], options, &fonts[1]},
+        {count_italic,      names_italic,      attrs[2], options, &fonts[2]},
+        {count_bold_italic, names_bold_italic, attrs[3], options, &fonts[3]},
     };
 
     thrd_t tids[4] = {0};
@@ -1097,6 +1118,8 @@ reload_fonts(struct terminal *term, bool resize_grid)
         } else
             success = false;
     }
+
+    fcft_font_options_destroy(options);
 
     for (size_t i = 0; i < 4; i++) {
         for (size_t j = 0; j < counts[i]; j++)
@@ -1132,6 +1155,12 @@ load_fonts_from_conf(struct terminal *term)
     }
 
     return reload_fonts(term, true);
+}
+
+static inline uint8_t gamma_correct(uint8_t value, double gamma) {
+    double normalized = value / 255.0;
+    double corrected = pow(normalized, gamma) * 255.0;
+    return (uint8_t)corrected;
 }
 
 static void
@@ -1202,14 +1231,38 @@ load_background_image(struct terminal *term) {
 
     fclose(fp);
 
-    pixman_image_t *pixman_image = pixman_image_create_bits(PIXMAN_a8r8g8b8, width, height, NULL, 0);
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            png_bytep px = &(row_pointers[y][x * 4]);
-            uint32_t *dst = (uint32_t *)(pixman_image_get_data(pixman_image) + y * pixman_image_get_stride(pixman_image) / 4 + x);
-            *dst = (px[3] << 24) | (px[0] << 16) | (px[1] << 8) | px[2];
+    pixman_format_code_t pixman_fmt = PIXMAN_a8r8g8b8;
+    if (term->conf->tweak.surface_bit_depth == SHM_10_BIT) {
+        if (term->wl->shm_have_argb2101010 && term->wl->shm_have_xrgb2101010) {
+            pixman_fmt = PIXMAN_a2r10g10b10;
+        }
+        else if (term->wl->shm_have_abgr2101010 && term->wl->shm_have_xbgr2101010) {
+            pixman_fmt = PIXMAN_a2b10g10r10;
         }
     }
+
+    double gamma = 2.2;
+    uint32_t *pixels = (uint32_t *)malloc(width * height * sizeof(uint32_t));
+    for (int y = 0; y < height; y++) {
+        png_bytep row = row_pointers[y];
+        for (int x = 0; x < width; x++) {
+            png_bytep px = &(row[x * 4]);
+            uint8_t a = px[3];
+            uint8_t r = px[0];
+            uint8_t g = px[1];
+            uint8_t b = px[2];
+
+            if (term->conf->gamma_correct) {
+                r = gamma_correct(r, gamma);
+                g = gamma_correct(g, gamma);
+                b = gamma_correct(b, gamma);
+            }
+
+            pixels[y * width + x] = (a << 24) | (r << 16) | (g << 8) | b;
+        }
+    }
+
+    pixman_image_t *pixman_image = pixman_image_create_bits(pixman_fmt, width, height, pixels, width * 4);
 
     term->render.background_image.pit = pixman_image;
     term->render.background_image.width = width;
@@ -1327,6 +1380,8 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
         goto err;
     }
 
+    const bool ten_bit_surfaces = conf->tweak.surface_bit_depth == SHM_10_BIT;
+
     /* Initialize configure-based terminal attributes */
     *term = (struct terminal) {
         .fdm = fdm,
@@ -1414,14 +1469,15 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
                 .height = 0,
             },
             .chains = {
-                .background_image = shm_chain_new(wayl->shm, false, 1),
-                .grid = shm_chain_new(wayl->shm, true, 1 + conf->render_worker_count),
-                .search = shm_chain_new(wayl->shm, false, 1),
-                .scrollback_indicator = shm_chain_new(wayl->shm, false, 1),
-                .render_timer = shm_chain_new(wayl->shm, false, 1),
-                .url = shm_chain_new(wayl->shm, false, 1),
-                .csd = shm_chain_new(wayl->shm, false, 1),
-                .overlay = shm_chain_new(wayl->shm, false, 1),
+                .background_image = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
+                .grid = shm_chain_new(wayl, true, 1 + conf->render_worker_count,
+                                      ten_bit_surfaces),
+                .search = shm_chain_new(wayl, false, 1 ,ten_bit_surfaces),
+                .scrollback_indicator = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
+                .render_timer = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
+                .url = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
+                .csd = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
+                .overlay = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
             },
             .scrollback_lines = conf->scrollback.lines,
             .app_sync_updates.timer_fd = app_sync_updates_fd,
@@ -1565,6 +1621,9 @@ term_window_configured(struct terminal *term)
     if (!term->shutdown.in_progress) {
         xassert(term->window->is_configured);
         fdm_add(term->fdm, term->ptmx, EPOLLIN, &fdm_ptmx, term);
+
+        const bool gamma_correct = render_do_linear_blending(term);
+        LOG_INFO("gamma-correct blending: %s", gamma_correct ? "enabled" : "disabled");
     }
 }
 
@@ -2130,7 +2189,7 @@ static inline void
 erase_line(struct terminal *term, struct row *row)
 {
     erase_cell_range(term, row, 0, term->cols - 1);
-    row->linebreak = false;
+    row->linebreak = true;
     row->shell_integration.prompt_marker = false;
     row->shell_integration.cmd_start = -1;
     row->shell_integration.cmd_end = -1;
@@ -2961,6 +3020,8 @@ term_cursor_to(struct terminal *term, int row, int col)
     term->grid->cursor.point.col = col;
     term->grid->cursor.point.row = row;
 
+    term_reset_grapheme_state(term);
+
     term->grid->cur_row = grid_row(term->grid, row);
 }
 
@@ -2977,6 +3038,7 @@ term_cursor_col(struct terminal *term, int col)
 
     term->grid->cursor.lcf = false;
     term->grid->cursor.point.col = col;
+    term_reset_grapheme_state(term);
 }
 
 void
@@ -2986,6 +3048,7 @@ term_cursor_left(struct terminal *term, int count)
     term->grid->cursor.point.col -= move_amount;
     xassert(term->grid->cursor.point.col >= 0);
     term->grid->cursor.lcf = false;
+    term_reset_grapheme_state(term);
 }
 
 void
@@ -2995,6 +3058,7 @@ term_cursor_right(struct terminal *term, int count)
     term->grid->cursor.point.col += move_amount;
     xassert(term->grid->cursor.point.col < term->cols);
     term->grid->cursor.lcf = false;
+    term_reset_grapheme_state(term);
 }
 
 void
@@ -3259,13 +3323,14 @@ term_carriage_return(struct terminal *term)
 void
 term_linefeed(struct terminal *term)
 {
-    term->grid->cur_row->linebreak = true;
     term->grid->cursor.lcf = false;
 
     if (term->grid->cursor.point.row == term->scroll_region.end - 1)
         term_scroll(term, 1);
     else
         term_cursor_down(term, 1);
+
+    term_reset_grapheme_state(term);
 }
 
 void
@@ -3721,7 +3786,7 @@ term_set_app_id(struct terminal *term, const char *app_id)
         term->app_id = NULL;
     }
 
-    const size_t length = strlen(app_id);
+    const size_t length = app_id != NULL ? strlen(app_id) : 0;
     if (length > 2048) {
         /*
          * Not sure if there's a limit in the protocol, or the
@@ -4254,7 +4319,7 @@ term_process_and_print_non_ascii(struct terminal *term, char32_t wc)
         if (grapheme_clustering) {
             /* Check if we're on a grapheme cluster break */
             if (utf8proc_grapheme_break_stateful(
-                    last, wc, &term->vt.grapheme_state))
+                    last, wc, &term->vt.grapheme_state) && width > 0)
             {
                 term_reset_grapheme_state(term);
                 goto out;

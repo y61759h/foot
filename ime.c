@@ -68,6 +68,16 @@ enter(void *data, struct zwp_text_input_v3 *zwp_text_input_v3,
 
     /* The main grid is the *only* input-receiving surface we have */
     seat->ime_focus = term;
+
+    const struct coord *cursor = &term->grid->cursor.point;
+
+    term_ime_set_cursor_rect(
+        term,
+        term->margins.left + cursor->col * term->cell_width,
+        term->margins.top + cursor->row * term->cell_height,
+        term->cell_width,
+        term->cell_height);
+
     ime_enable(seat);
 }
 

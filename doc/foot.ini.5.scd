@@ -58,8 +58,15 @@ empty string to be set, but it must be quoted: *KEY=""*)
 		- Dina:weight=bold:slant=italic
 		- Courier New:size=12
 		- Fantasque Sans Mono:fontfeatures=ss01
+		- Iosevka:fontfeatures=cv01=1:fontfeatures=cv06=1
 		- Meslo LG S:size=12, Noto Color Emoji:size=12
 		- Courier New:pixelsize=8
+	
+	Be aware that, depending on your setup, there may be global
+	FontConfig options that overrides options set here. If an option
+	appears to have no effect, ensure there is no global configuration
+	file that sets the same option with *assign* or *assign_replace*;
+	use one of the many *append* or possibly *prepend* modes.
 	
 	For each option, the first font is the primary font. The remaining
 	fonts are fallback fonts that will be used whenever a glyph cannot
@@ -190,6 +197,35 @@ empty string to be set, but it must be quoted: *KEY=""*)
 	used.
 
 	Default: _unset_
+
+*gamma-correct-blending*
+	Boolean. When enabled, foot will do gamma-correct blending in
+	linear color space. This is how font glyphs are supposed to be
+	rendered, but since nearly no applications or toolkits are doing
+	it on Linux, the result may not look like you are used to.
+	
+	Compared to the default (disabled), bright glyphs on a dark
+	background will appear thicker, and dark glyphs on a light
+	background will appear thinner.
+
+	Also be aware that many fonts have been developed on systems that
+	do not do gamma-correct blending, and may therefore look thicker
+	than intended when rendered with gamma-correct blending, since the
+	font designer set the font weight based on incorrect rendering.
+	
+	FreeType can limit the effect of the latter, with a technique
+	called stem darkening. It is only available for CFF fonts
+	(OpenType, .otf) and disabled by default (in FreeType). You can
+	enable it by setting the environment variable
+	*FREETYPE_PROPERTIES="cff:no-stem-darkening=0"* before starting
+	foot.
+	
+	You may also want to enable 10-bit image buffers when
+	gamma-correct blending is enabled. Though probably only if you do
+	not use a transparent background (with 10-bit buffers, you only
+	get 2 bits alpha). See *tweak.surface-bit-depth*.
+	
+	Default: enabled when compositor support is available
 
 *box-drawings-uses-font-glyphs*
 	Boolean. When disabled, foot generates box/line drawing characters
@@ -835,8 +871,8 @@ applications can change these at runtime.
 
 *style*
 	Configures the default cursor style, and is one of: *block*,
-	*beam* or *underline*. Note that this can be overridden by
-	applications. Default: _block_.
+	*beam*, *underline* or *hollow*. Note that this can be overridden
+	by applications. Default: _block_.
 
 *unfocused-style*
 	Configures how the cursor is rendered when the terminal window is
@@ -1394,6 +1430,12 @@ scrollback search mode. The syntax is exactly the same as the regular
 	Deletes the **word after** the cursor. Default: _Mod1+d
 	Control+Delete_.
 
+*delete-to-start*
+	Deletes search input before the cursor. Default: _Ctrl+u_.
+
+*delete-to-end*
+	Deletes search input after the cursor. Default: _Ctrl+k_.
+
 *extend-char*
 	Extend current selection to the right, by one character. Default:
 	_Shift+Right_.
@@ -1674,9 +1716,8 @@ any of these options.
 *scaling-filter*
 	Overrides the default scaling filter used when down-scaling bitmap
 	fonts (e.g. emoji fonts). Possible values are *none*, *nearest*,
-	*bilinear*, *cubic* or *lanczos3*. *cubic* and *lanczos3* produce
-	the best results, but are slower (with *lanczos3* being the best
-	_and_ slowest).
+	*bilinear*, *impulse*, *box*, *linear*, *cubic* *gaussian*,
+	*lanczos2*, *lanczos3* or *lanczos3-stretched*.
 	
 	Default: _lanczos3_.
 
@@ -1903,6 +1944,26 @@ any of these options.
 	Amount by which bold fonts are brightened when
 	*bold-text-in-bright* is set to *yes* (the *palette-based* variant
 	is not affected by this option). Default: _1.3_.
+
+*surface-bit-depth*
+	Selects which RGB bit depth to use for image buffers. One of
+	*8-bit*, or *10-bit*.
+	
+	The default, *8-bit*, uses 8 bits for all channels, alpha
+	included. When *gamma-correct-blending* is disabled, this is the
+	best option.
+	
+	When *gamma-correct-blending* is enabled, you may want to enable
+	10-bit surfaces, as that improves the color resolution. Be aware
+	however, that in this mode, the alpha channel is only 2 bits
+	instead of 8 bits. Thus, if you are using a transparent
+	background, you may want to use the default, *8-bit*, even if you
+	have gamma-correct blending enabled.
+	
+	You should also note that 10-bit surface is slower. This will
+	increase input latency and decrease rendering throughput.
+	
+	Default: _8-bit_
 
 # SEE ALSO
 

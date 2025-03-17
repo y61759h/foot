@@ -128,6 +128,12 @@ render_worker_thread(void *_ctx)
     return 0;
 }
 
+bool
+render_do_linear_blending(const struct terminal *term)
+{
+    return false;
+}
+
 struct extraction_context *
 extract_begin(enum selection_kind kind, bool strip_trailing_empty)
 {
@@ -197,7 +203,9 @@ void shm_unref(struct buffer *buf) {}
 void shm_chain_free(struct buffer_chain *chain) {}
 
 struct buffer_chain *
-shm_chain_new(struct wl_shm *shm, bool scrollable, size_t pix_instances)
+shm_chain_new(
+    struct wayland *wayl, bool scrollable, size_t pix_instances,
+    bool ten_bit_it_if_capable)
 {
     return NULL;
 }

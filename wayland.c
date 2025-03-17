@@ -237,6 +237,15 @@ seat_destroy(struct seat *seat)
 static void
 shm_format(void *data, struct wl_shm *wl_shm, uint32_t format)
 {
+    struct wayland *wayl = data;
+
+    switch (format) {
+    case WL_SHM_FORMAT_XRGB2101010: wayl->shm_have_xrgb2101010 = true; break;
+    case WL_SHM_FORMAT_ARGB2101010: wayl->shm_have_argb2101010 = true; break;
+    case WL_SHM_FORMAT_XBGR2101010: wayl->shm_have_xbgr2101010 = true; break;
+    case WL_SHM_FORMAT_ABGR2101010: wayl->shm_have_abgr2101010 = true; break;
+    }
+
 #if defined(_DEBUG)
     bool have_description = false;
 
@@ -664,6 +673,88 @@ clock_id(void *data, struct wp_presentation *wp_presentation, uint32_t clk_id)
 
 static const struct wp_presentation_listener presentation_listener = {
     .clock_id = &clock_id,
+};
+
+static void
+color_manager_create_image_description(struct wayland *wayl)
+{
+    if (!wayl->color_management.have_feat_parametric)
+        return;
+
+    if (!wayl->color_management.have_primaries_srgb)
+        return;
+
+    if (!wayl->color_management.have_tf_ext_linear)
+        return;
+
+    struct wp_image_description_creator_params_v1 *params =
+        wp_color_manager_v1_create_parametric_creator(wayl->color_management.manager);
+
+    wp_image_description_creator_params_v1_set_tf_named(
+        params, WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_EXT_LINEAR);
+
+    wp_image_description_creator_params_v1_set_primaries_named(
+        params, WP_COLOR_MANAGER_V1_PRIMARIES_SRGB);
+
+    wayl->color_management.img_description =
+        wp_image_description_creator_params_v1_create(params);
+}
+
+static void
+color_manager_supported_intent(void *data,
+                               struct wp_color_manager_v1 *wp_color_manager_v1,
+                               uint32_t render_intent)
+{
+    struct wayland *wayl = data;
+    if (render_intent == WP_COLOR_MANAGER_V1_RENDER_INTENT_PERCEPTUAL)
+        wayl->color_management.have_intent_perceptual = true;
+}
+
+static void
+color_manager_supported_feature(void *data,
+                                struct wp_color_manager_v1 *wp_color_manager_v1,
+                                uint32_t feature)
+{
+    struct wayland *wayl = data;
+
+    if (feature == WP_COLOR_MANAGER_V1_FEATURE_PARAMETRIC)
+        wayl->color_management.have_feat_parametric = true;
+}
+
+static void
+color_manager_supported_tf_named(void *data,
+                                 struct wp_color_manager_v1 *wp_color_manager_v1,
+                                 uint32_t tf)
+{
+    struct wayland *wayl = data;
+    if (tf == WP_COLOR_MANAGER_V1_TRANSFER_FUNCTION_EXT_LINEAR)
+        wayl->color_management.have_tf_ext_linear = true;
+}
+
+static void
+color_manager_supported_primaries_named(void *data,
+                                        struct wp_color_manager_v1 *wp_color_manager_v1,
+                                        uint32_t primaries)
+{
+    struct wayland *wayl = data;
+    if (primaries == WP_COLOR_MANAGER_V1_PRIMARIES_SRGB)
+        wayl->color_management.have_primaries_srgb = true;
+}
+
+static void
+color_manager_done(void *data,
+                   struct wp_color_manager_v1 *wp_color_manager_v1)
+{
+    struct wayland *wayl = data;
+    color_manager_create_image_description(wayl);
+}
+
+static const struct wp_color_manager_v1_listener color_manager_listener = {
+    .supported_intent = &color_manager_supported_intent,
+    .supported_feature = &color_manager_supported_feature,
+    .supported_primaries_named = &color_manager_supported_primaries_named,
+    .supported_tf_named = &color_manager_supported_tf_named,
+    .done = &color_manager_done,
 };
 
 static bool
@@ -1363,7 +1454,6 @@ handle_global(void *data, struct wl_registry *registry,
             &wp_single_pixel_buffer_manager_v1_interface, required);
     }
 
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     else if (streq(interface, xdg_toplevel_icon_v1_interface.name)) {
         const uint32_t required = 1;
         if (!verify_iface_version(interface, version, required))
@@ -1372,9 +1462,7 @@ handle_global(void *data, struct wl_registry *registry,
         wayl->toplevel_icon_manager = wl_registry_bind(
             wayl->registry, name, &xdg_toplevel_icon_v1_interface, required);
     }
-#endif
 
-#if defined(HAVE_XDG_SYSTEM_BELL)
     else if (streq(interface, xdg_system_bell_v1_interface.name)) {
         const uint32_t required = 1;
         if (!verify_iface_version(interface, version, required))
@@ -1383,7 +1471,18 @@ handle_global(void *data, struct wl_registry *registry,
         wayl->system_bell = wl_registry_bind(
             wayl->registry, name, &xdg_system_bell_v1_interface, required);
     }
-#endif
+
+    else if (streq(interface, wp_color_manager_v1_interface.name)) {
+        const uint32_t required = 1;
+        if (!verify_iface_version(interface, version, required))
+            return;
+
+        wayl->color_management.manager = wl_registry_bind(
+            wayl->registry, name, &wp_color_manager_v1_interface, required);
+
+        wp_color_manager_v1_add_listener(
+            wayl->color_management.manager, &color_manager_listener, wayl);
+    }
 
 #if defined(FOOT_IME_ENABLED) && FOOT_IME_ENABLED
     else if (streq(interface, zwp_text_input_manager_v3_interface.name)) {
@@ -1625,11 +1724,9 @@ wayl_init(struct fdm *fdm, struct key_binding_manager *key_binding_manager,
                  "falling back to client-side cursors");
     }
 
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     if (wayl->toplevel_icon_manager == NULL) {
         LOG_WARN("compositor does not implement the XDG toplevel icon protocol");
     }
-#endif
 
 #if defined(FOOT_IME_ENABLED) && FOOT_IME_ENABLED
     if (wayl->text_input_manager == NULL) {
@@ -1707,14 +1804,14 @@ wayl_destroy(struct wayland *wayl)
         zwp_text_input_manager_v3_destroy(wayl->text_input_manager);
 #endif
 
-#if defined(HAVE_XDG_SYSTEM_BELL)
+    if (wayl->color_management.img_description != NULL)
+        wp_image_description_v1_destroy(wayl->color_management.img_description);
+    if (wayl->color_management.manager != NULL)
+        wp_color_manager_v1_destroy(wayl->color_management.manager);
     if (wayl->system_bell != NULL)
         xdg_system_bell_v1_destroy(wayl->system_bell);
-#endif
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     if (wayl->toplevel_icon_manager != NULL)
         xdg_toplevel_icon_manager_v1_destroy(wayl->toplevel_icon_manager);
-#endif
     if (wayl->single_pixel_manager != NULL)
         wp_single_pixel_buffer_manager_v1_destroy(wayl->single_pixel_manager);
     if (wayl->fractional_scale_manager != NULL)
@@ -1832,7 +1929,6 @@ wayl_win_init(struct terminal *term, const char *token)
 
     xdg_toplevel_set_app_id(win->xdg_toplevel, conf->app_id);
 
-#if defined(HAVE_XDG_TOPLEVEL_ICON)
     if (wayl->toplevel_icon_manager != NULL) {
         const char *app_id =
             term->app_id != NULL ? term->app_id : term->conf->app_id;
@@ -1845,7 +1941,36 @@ wayl_win_init(struct terminal *term, const char *token)
             wayl->toplevel_icon_manager, win->xdg_toplevel, icon);
         xdg_toplevel_icon_v1_destroy(icon);
     }
-#endif
+
+    if (term->conf->gamma_correct != GAMMA_CORRECT_DISABLED) {
+        if (wayl->color_management.img_description != NULL) {
+            xassert(wayl->color_management.manager != NULL);
+
+            win->surface.color_management = wp_color_manager_v1_get_surface(
+                term->wl->color_management.manager, win->surface.surf);
+
+            wp_color_management_surface_v1_set_image_description(
+                win->surface.color_management, wayl->color_management.img_description,
+                WP_COLOR_MANAGER_V1_RENDER_INTENT_PERCEPTUAL);
+        } else if (term->conf->gamma_correct == GAMMA_CORRECT_ENABLED) {
+            if (wayl->color_management.manager == NULL) {
+                LOG_WARN(
+                    "gamma-corrected-blending: disabling; "
+                    "compositor does not implement the color-management protocol");
+            } else {
+                LOG_WARN(
+                    "gamma-corrected-blending: disabling; "
+                    "compositor does not implement all required color-management features");
+                LOG_WARN("use e.g. 'wayland-info' and verify the compositor implements:");
+                LOG_WARN("  - feature: parametric");
+                LOG_WARN("  - render intent: perceptual");
+                LOG_WARN("  - TF: ext_linear");
+                LOG_WARN("  - primaries: sRGB");
+            }
+        } else {
+            /* "auto" - don't warn */
+        }
+    }
 
     if (conf->csd.preferred == CONF_CSD_PREFER_NONE) {
         /* User specifically do *not* want decorations */
@@ -1861,8 +1986,8 @@ wayl_win_init(struct terminal *term, const char *token)
         zxdg_toplevel_decoration_v1_set_mode(
             win->xdg_toplevel_decoration,
             (conf->csd.preferred == CONF_CSD_PREFER_SERVER
-             ? ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE
-             : ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE));
+                ? ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE
+                : ZXDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE));
 
         zxdg_toplevel_decoration_v1_add_listener(
             win->xdg_toplevel_decoration, &xdg_toplevel_decoration_listener, win);
@@ -1963,9 +2088,9 @@ wayl_win_destroy(struct wl_window *win)
 
         /* Main window */
     win->unmapped = true;
-    wl_surface_attach(win->surface.surf, NULL, 0, 0);
-    wl_surface_commit(win->surface.surf);
-    wayl_roundtrip(win->term->wl);
+    // wl_surface_attach(win->surface.surf, NULL, 0, 0);
+    // wl_surface_commit(win->surface.surf);
+    // wayl_roundtrip(win->term->wl);
 
     tll_free(win->on_outputs);
 
@@ -1992,8 +2117,10 @@ wayl_win_destroy(struct wl_window *win)
         free(it->item);
 
         tll_remove(win->xdg_tokens, it);
-    }
+}
 
+    if (win->surface.color_management != NULL)
+        wp_color_management_surface_v1_destroy(win->surface.color_management);
     if (win->fractional_scale != NULL)
         wp_fractional_scale_v1_destroy(win->fractional_scale);
     if (win->surface.viewport != NULL)
@@ -2270,7 +2397,6 @@ wayl_win_set_urgent(struct wl_window *win)
 bool
 wayl_win_ring_bell(const struct wl_window *win)
 {
-#if defined(HAVE_XDG_SYSTEM_BELL)
     if (win->term->wl->system_bell == NULL) {
         static bool have_warned = false;
 
@@ -2284,9 +2410,6 @@ wayl_win_ring_bell(const struct wl_window *win)
 
     xdg_system_bell_v1_ring(win->term->wl->system_bell, win->surface.surf);
     return true;
-#else
-    return false;
-#endif
 }
 
 bool
@@ -2313,6 +2436,7 @@ wayl_win_subsurface_new_with_custom_parent(
     struct wayland *wayl = win->term->wl;
 
     surf->surface.surf = NULL;
+    surf->surface.viewport = NULL;
     surf->sub = NULL;
 
     struct wl_surface *main_surface
@@ -2321,6 +2445,20 @@ wayl_win_subsurface_new_with_custom_parent(
     if (main_surface == NULL) {
         LOG_ERR("failed to instantiate surface for sub-surface");
         return false;
+    }
+
+    surf->surface.color_management = NULL;
+    if (win->term->conf->gamma_correct &&
+        wayl->color_management.img_description != NULL)
+    {
+        xassert(wayl->color_management.manager != NULL);
+
+        surf->surface.color_management = wp_color_manager_v1_get_surface(
+            wayl->color_management.manager, main_surface);
+
+        wp_color_management_surface_v1_set_image_description(
+            surf->surface.color_management, wayl->color_management.img_description,
+            WP_COLOR_MANAGER_V1_RENDER_INTENT_PERCEPTUAL);
     }
 
     struct wl_subsurface *sub = wl_subcompositor_get_subsurface(
@@ -2373,6 +2511,11 @@ wayl_win_subsurface_destroy(struct wayl_sub_surface *surf)
 {
     if (surf == NULL)
         return;
+
+    if (surf->surface.color_management != NULL) {
+        wp_color_management_surface_v1_destroy(surf->surface.color_management);
+        surf->surface.color_management = NULL;
+    }
 
     if (surf->surface.viewport != NULL) {
         wp_viewport_destroy(surf->surface.viewport);

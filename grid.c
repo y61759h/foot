@@ -439,7 +439,7 @@ grid_row_alloc(int cols, bool initialize)
 {
     struct row *row = xmalloc(sizeof(*row));
     row->dirty = false;
-    row->linebreak = false;
+    row->linebreak = true;
     row->extra = NULL;
     row->shell_integration.prompt_marker = false;
     row->shell_integration.cmd_start = -1;
@@ -501,7 +501,6 @@ grid_resize_without_reflow(
                sizeof(struct cell) * min(old_cols, new_cols));
 
         new_row->dirty = old_row->dirty;
-        new_row->linebreak = false;
         new_row->shell_integration.prompt_marker = old_row->shell_integration.prompt_marker;
         new_row->shell_integration.cmd_start = min(old_row->shell_integration.cmd_start, new_cols - 1);
         new_row->shell_integration.cmd_end = min(old_row->shell_integration.cmd_end, new_cols - 1);
@@ -712,7 +711,6 @@ _line_wrap(struct grid *old_grid, struct row **new_grid, struct row *row,
     } else {
         /* Scrollback is full, need to reuse a row */
         grid_row_reset_extra(new_row);
-        new_row->linebreak = false;
         new_row->shell_integration.prompt_marker = false;
         new_row->shell_integration.cmd_start = -1;
         new_row->shell_integration.cmd_end = -1;
@@ -894,6 +892,8 @@ grid_resize_and_reflow(
                 i, tracking_points[i]->row, tracking_points[i]->col);
     }
 
+    int coalesced_linebreaks = 0;
+
     /*
      * Walk the old grid
      */
@@ -983,6 +983,20 @@ grid_resize_and_reflow(
             col_count = max(col_count, last_on_row->end + 1);
         } else
             underline_range = underline_range_terminator = NULL;
+
+        if (unlikely(col_count > 0 && coalesced_linebreaks > 0)) {
+            for (size_t apa = 0; apa < coalesced_linebreaks; apa++) {
+                /* Erase the remaining cells */
+                memset(&new_row->cells[new_col_idx], 0,
+                       (new_cols - new_col_idx) * sizeof(new_row->cells[0]));
+                new_row->linebreak = true;
+
+                if (r + 1 < old_rows)
+                    line_wrap();
+            }
+
+            coalesced_linebreaks = 0;
+        }
 
         for (int c = 0; c < col_count;) {
             const struct cell *old = &old_row->cells[c];
@@ -1089,39 +1103,60 @@ grid_resize_and_reflow(
                 }
 
                 new_row->cells[new_col_idx++] = *old;
+
+                /*
+                 * TODO: simulate LCF instead?
+                 *
+                 * Rows have linebreak=true by default. This is needed
+                 * for a number of reasons. However, we want non-empty
+                 * rows to have linebreak=false, *until* we reach the
+                 * end of an old row with linebreak=true, at which
+                 * point we set linebreak=true on the new row.
+                 */
+                new_row->linebreak = false;
                 old++;
                 c++;
             }
         }
 
         if (old_row->linebreak) {
-            /* Erase the remaining cells */
-            memset(&new_row->cells[new_col_idx], 0,
-                   (new_cols - new_col_idx) * sizeof(new_row->cells[0]));
-            new_row->linebreak = true;
+            if (col_count > 0) {
+                /* Erase the remaining cells */
+                memset(&new_row->cells[new_col_idx], 0,
+                       (new_cols - new_col_idx) * sizeof(new_row->cells[0]));
+                new_row->linebreak = true;
 
-            if (r + 1 < old_rows)
-                line_wrap();
-            else if (new_row->extra != NULL) {
-                if (new_row->extra->uri_ranges.count > 0) {
-                    /*
-                     * line_wrap() "closes" still-open URIs. Since
-                     * this is the *last* row, and since we're
-                     * line-breaking due to a hard line-break (rather
-                     * than running out of cells in the "new_row"),
-                     * there shouldn't be an open URI (it would have
-                     * been closed when we reached the end of the URI
-                     * while reflowing the last "old" row).
-                     */
-                    int last_idx = new_row->extra->uri_ranges.count - 1;
-                    xassert(new_row->extra->uri_ranges.v[last_idx].end >= 0);
+                if (r + 1 < old_rows) {
+                    /* Not the last (old) row */
+                    line_wrap();
+                } else if (new_row->extra != NULL) {
+                    if (new_row->extra->uri_ranges.count > 0) {
+                        /*
+                         * line_wrap() "closes" still-open URIs. Since
+                         * this is the *last* row, and since we're
+                         * line-breaking due to a hard line-break (rather
+                         * than running out of cells in the "new_row"),
+                         * there shouldn't be an open URI (it would have
+                         * been closed when we reached the end of the URI
+                         * while reflowing the last "old" row).
+                         */
+                        int last_idx = new_row->extra->uri_ranges.count - 1;
+                        xassert(new_row->extra->uri_ranges.v[last_idx].end >= 0);
+                    }
+
+                    if (new_row->extra->underline_ranges.count > 0) {
+                        int last_idx = new_row->extra->underline_ranges.count - 1;
+                        xassert(new_row->extra->underline_ranges.v[last_idx].end >= 0);
+                    }
                 }
-
-                if (new_row->extra->underline_ranges.count > 0) {
-                    int last_idx = new_row->extra->underline_ranges.count - 1;
-                    xassert(new_row->extra->underline_ranges.v[last_idx].end >= 0);
-
-                }
+            } else {
+                /*
+                 * rows have linebreak=true by default. But we don't
+                 * want trailing empty lines to result in actual lines
+                 * in the new grid (think: empty window with prompt at
+                 * the top)
+                 */
+                coalesced_linebreaks++;
             }
         }
 

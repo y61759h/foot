@@ -180,6 +180,8 @@ static const char *const search_binding_action_map[] = {
     [BIND_ACTION_SEARCH_DELETE_PREV_WORD] = "delete-prev-word",
     [BIND_ACTION_SEARCH_DELETE_NEXT] = "delete-next",
     [BIND_ACTION_SEARCH_DELETE_NEXT_WORD] = "delete-next-word",
+    [BIND_ACTION_SEARCH_DELETE_TO_START] = "delete-to-start",
+    [BIND_ACTION_SEARCH_DELETE_TO_END] = "delete-to-end",
     [BIND_ACTION_SEARCH_EXTEND_CHAR] = "extend-char",
     [BIND_ACTION_SEARCH_EXTEND_WORD] = "extend-to-word-boundary",
     [BIND_ACTION_SEARCH_EXTEND_WORD_WS] = "extend-to-next-whitespace",
@@ -1077,30 +1079,6 @@ parse_section_main(struct context *ctx)
     else if (streq(key, "word-delimiters"))
         return value_to_wchars(ctx, &conf->word_delimiters);
 
-    else if (streq(key, "notify")) {
-        user_notification_add(
-            &conf->notifications, USER_NOTIFICATION_DEPRECATED,
-            xstrdup("notify: use desktop-notifications.command instead"));
-        log_msg(
-            LOG_CLASS_WARNING, LOG_MODULE, __FILE__, __LINE__,
-            "deprecated: notify: use desktop-notifications.command instead");
-        return value_to_spawn_template(
-            ctx, &conf->desktop_notifications.command);
-    }
-
-    else if (streq(key, "notify-focus-inhibit")) {
-        user_notification_add(
-            &conf->notifications, USER_NOTIFICATION_DEPRECATED,
-            xstrdup("notify-focus-inhibit: "
-                    "use desktop-notifications.inhibit-when-focused instead"));
-        log_msg(
-            LOG_CLASS_WARNING, LOG_MODULE, __FILE__, __LINE__,
-            "deprecrated: notify-focus-inhibit: "
-            "use desktop-notifications.inhibit-when-focused instead");
-        return value_to_bool(
-            ctx, &conf->desktop_notifications.inhibit_when_focused);
-    }
-
     else if (streq(key, "selection-target")) {
         _Static_assert(sizeof(conf->selection_target) == sizeof(int),
                        "enum is not 32-bit");
@@ -1123,6 +1101,18 @@ parse_section_main(struct context *ctx)
             conf->utmp_helper_path = NULL;
         }
 
+        return true;
+    }
+
+    else if (streq(key, "gamma-correct-blending")) {
+        bool gamma_correct;
+        if (!value_to_bool(ctx, &gamma_correct))
+            return false;
+
+        conf->gamma_correct =
+            gamma_correct
+                ? GAMMA_CORRECT_ENABLED
+                : GAMMA_CORRECT_DISABLED;
         return true;
     }
 
@@ -1538,7 +1528,7 @@ parse_section_cursor(struct context *ctx)
 
         return value_to_enum(
             ctx,
-            (const char *[]){"block", "underline", "beam", NULL},
+            (const char *[]){"block", "underline", "beam", "hollow", NULL},
             (int *)&conf->cursor.style);
     }
 
@@ -2674,8 +2664,15 @@ parse_section_tweak(struct context *ctx)
             [FCFT_SCALING_FILTER_NONE] = "none",
             [FCFT_SCALING_FILTER_NEAREST] = "nearest",
             [FCFT_SCALING_FILTER_BILINEAR] = "bilinear",
+
+            [FCFT_SCALING_FILTER_IMPULSE] = "impulse",
+            [FCFT_SCALING_FILTER_BOX] = "box",
+            [FCFT_SCALING_FILTER_LINEAR] = "linear",
             [FCFT_SCALING_FILTER_CUBIC] = "cubic",
+            [FCFT_SCALING_FILTER_GAUSSIAN] = "gaussian",
+            [FCFT_SCALING_FILTER_LANCZOS2] = "lanczos2",
             [FCFT_SCALING_FILTER_LANCZOS3] = "lanczos3",
+            [FCFT_SCALING_FILTER_LANCZOS3_STRETCHED] = "lanczos3-stretched",
             NULL,
         };
 
@@ -2785,6 +2782,16 @@ parse_section_tweak(struct context *ctx)
 
     else if (streq(key, "bold-text-in-bright-amount"))
         return value_to_float(ctx, &conf->bold_in_bright.amount);
+
+    else if (streq(key, "surface-bit-depth")) {
+        _Static_assert(sizeof(conf->tweak.surface_bit_depth) == sizeof(int),
+            "enum is not 32-bit");
+
+        return value_to_enum(
+                ctx,
+                (const char *[]){"8-bit", "10-bit", NULL},
+                (int *)&conf->tweak.surface_bit_depth);
+    }
 
     else {
         LOG_CONTEXTUAL_ERR("not a valid option: %s", key);
@@ -3204,6 +3211,8 @@ add_default_search_bindings(struct config *conf)
         {BIND_ACTION_SEARCH_DELETE_NEXT, m("none"), {{XKB_KEY_Delete}}},
         {BIND_ACTION_SEARCH_DELETE_NEXT_WORD, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_Delete}}},
         {BIND_ACTION_SEARCH_DELETE_NEXT_WORD, m(XKB_MOD_NAME_ALT), {{XKB_KEY_d}}},
+        {BIND_ACTION_SEARCH_DELETE_TO_START, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_u}}},
+        {BIND_ACTION_SEARCH_DELETE_TO_END, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_k}}},
         {BIND_ACTION_SEARCH_EXTEND_CHAR, m(XKB_MOD_NAME_SHIFT), {{XKB_KEY_Right}}},
         {BIND_ACTION_SEARCH_EXTEND_WORD, m(XKB_MOD_NAME_CTRL "+" XKB_MOD_NAME_SHIFT), {{XKB_KEY_Right}}},
         {BIND_ACTION_SEARCH_EXTEND_WORD, m(XKB_MOD_NAME_CTRL), {{XKB_KEY_w}}},
@@ -3318,6 +3327,7 @@ config_load(struct config *conf, const char *conf_path,
         .underline_thickness = {.pt = 0., .px = -1},
         .strikeout_thickness = {.pt = 0., .px = -1},
         .dpi_aware = false,
+        .gamma_correct = GAMMA_CORRECT_AUTO,
         .security = {
             .osc52 = OSC52_ENABLED,
         },
@@ -3426,6 +3436,7 @@ config_load(struct config *conf, const char *conf_path,
             .box_drawing_solid_shades = true,
             .font_monospace_warn = true,
             .sixel = true,
+            .surface_bit_depth = 8,
         },
 
         .touch = {

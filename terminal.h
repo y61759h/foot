@@ -88,7 +88,7 @@ struct range {
 
 struct cursor {
     struct coord point;
-    bool lcf;
+    bool lcf; /* Last Column Flag; https://github.com/mattiase/wraptest#basic-vt-line-wrapping-rules */
 };
 
 enum damage_type {DAMAGE_SCROLL, DAMAGE_SCROLL_REVERSE,
@@ -786,6 +786,10 @@ struct terminal {
         unsigned repeat_count;
 
         bool transparent_bg;
+
+        bool linear_blending;
+        bool use_10bit;
+        pixman_format_code_t pixman_fmt;
 
         /* Application configurable */
         unsigned palette_size;  /* Number of colors in palette */
