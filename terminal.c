@@ -1168,6 +1168,9 @@ load_background_image(struct terminal *term) {
     if (term->conf->background_image == NULL)
         return;
 
+    if (term->colors.alpha == 0xffff)
+        return;
+
     FILE *fp = fopen(term->conf->background_image, "rb");
     if (!fp) {
         fprintf(stderr, "Could not open %s\n", term->conf->background_image);
@@ -1242,7 +1245,8 @@ load_background_image(struct terminal *term) {
     }
 
     double gamma = 2.2;
-    uint32_t *pixels = (uint32_t *)malloc(width * height * sizeof(uint32_t));
+    pixman_image_t *pixman_image = pixman_image_create_bits(pixman_fmt, width, height, NULL, width * 4);
+    uint32_t *pixels = pixman_image_get_data(pixman_image);
     for (int y = 0; y < height; y++) {
         png_bytep row = row_pointers[y];
         for (int x = 0; x < width; x++) {
@@ -1262,7 +1266,6 @@ load_background_image(struct terminal *term) {
         }
     }
 
-    pixman_image_t *pixman_image = pixman_image_create_bits(pixman_fmt, width, height, pixels, width * 4);
 
     term->render.background_image.pit = pixman_image;
     term->render.background_image.width = width;
@@ -2019,7 +2022,8 @@ term_destroy(struct terminal *term)
 
     shm_unref(term->render.last_buf);
     shm_unref(term->render.background_image.last_buffer);
-    pixman_image_unref(term->render.background_image.pit);
+    if (term->render.background_image.pit)
+        pixman_image_unref(term->render.background_image.pit);
 
     shm_chain_free(term->render.chains.background_image);
     shm_chain_free(term->render.chains.grid);
