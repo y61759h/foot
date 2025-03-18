@@ -3219,7 +3219,7 @@ pixman_image_t* scale_and_crop_image(pixman_image_t *bg_image, int dest_width, i
     int stride = pixman_image_get_stride(bg_image);
 
     // 获取源图像的像素数据
-    uint8_t *src_data = (uint8_t *)pixman_image_get_data(bg_image);
+    uint8_t *bg_data = (uint8_t *)pixman_image_get_data(bg_image);
 
     // 创建目标图像
     pixman_image_t *src_image = pixman_image_create_bits(format, src_width, src_height, NULL, stride);
@@ -3228,7 +3228,7 @@ pixman_image_t* scale_and_crop_image(pixman_image_t *bg_image, int dest_width, i
     uint8_t *dest_data = (uint8_t *)pixman_image_get_data(src_image);
 
     // 复制像素数据
-    memcpy(dest_data, src_data, stride * src_height);
+    memcpy(dest_data, bg_data, stride * src_height);
 
     // 计算缩放比例
     double scale_x = ceil (((double)dest_width / src_width) * 100 ) / 100;
