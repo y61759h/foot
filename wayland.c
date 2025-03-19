@@ -2104,6 +2104,7 @@ wayl_win_destroy(struct wl_window *win)
     wayl_win_subsurface_destroy(&win->scrollback_indicator);
     wayl_win_subsurface_destroy(&win->render_timer);
     wayl_win_subsurface_destroy(&win->overlay);
+    wayl_win_subsurface_destroy(&win->background_image);
 
     shm_purge(term->render.chains.search);
     shm_purge(term->render.chains.scrollback_indicator);
