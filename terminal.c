@@ -1467,10 +1467,6 @@ term_init(const struct config *conf, struct fdm *fdm, struct reaper *reaper,
         .tab_stops = tll_init(),
         .wl = wayl,
         .render = {
-            .background_image = {
-                .width = 0,
-                .height = 0,
-            },
             .chains = {
                 .background_image = shm_chain_new(wayl, false, 1, ten_bit_surfaces),
                 .grid = shm_chain_new(wayl, true, 1 + conf->render_worker_count,
@@ -2022,7 +2018,7 @@ term_destroy(struct terminal *term)
 
     shm_unref(term->render.last_buf);
     shm_unref(term->render.background_image.last_buffer);
-    if (term->render.background_image.pit)
+    if (term->render.background_image.pit != NULL)
         pixman_image_unref(term->render.background_image.pit);
 
     shm_chain_free(term->render.chains.background_image);

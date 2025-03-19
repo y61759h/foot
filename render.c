@@ -3306,8 +3306,12 @@ render_background_image(struct terminal *term) {
     term->render.background_image.last_height = term->height;
     if (term->render.background_image.last_buffer != NULL) {
         shm_unref(term->render.background_image.last_buffer);
+        term->render.background_image.last_buffer = NULL;
     }
+
     term->render.background_image.last_buffer = buf;
+    shm_addref(buf);
+    buf->age = 0;
 
     return true;
 }
